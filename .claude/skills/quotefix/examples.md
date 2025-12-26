@@ -4,7 +4,7 @@ This file contains practical examples for using the quotefix skill.
 
 ## Example 1: Simple Shell Detection and Adaptation
 
-**Scenario:** Create a file with German Umlauts that works on both Windows and Unix systems.
+**Scenario:** Create a file that works on both Windows and Unix systems.
 
 ```bash
 #!/usr/bin/env bash
@@ -21,26 +21,22 @@ else
     SHELL_TYPE="posix"
 fi
 
-# Set UTF-8 encoding for German characters
-export LANG=de_DE.UTF-8
-export LC_ALL=de_DE.UTF-8
-
-# Create file with Umlauts (properly quoted)
-filename="Größenübersicht_2024.txt"
+# Create file with spaces in name (properly quoted)
+filename="Project Overview 2024.txt"
 touch "$filename"
-echo "Datei erstellt: $filename"
+echo "File created: $filename"
 
-# Write content with German characters
+# Write content
 cat > "$filename" << 'EOF'
-Größenübersicht
+Project Overview
 ===============
 
-Äpfel: 10 Stück
-Größe: 5-7 cm
-Preis: 2,50 €/kg
+Items: 10 pieces
+Size: 5-7 cm
+Price: $2.50/kg
 EOF
 
-echo "Inhalt geschrieben nach: $filename"
+echo "Content written to: $filename"
 ```
 
 **PowerShell equivalent:**
@@ -49,26 +45,22 @@ echo "Inhalt geschrieben nach: $filename"
 # Detect PowerShell version
 Write-Host "Running in PowerShell $($PSVersionTable.PSVersion)"
 
-# Set UTF-8 encoding
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$PSDefaultParameterValues['*:Encoding'] = 'utf8'
-
-# Create file with Umlauts
-$filename = "Größenübersicht_2024.txt"
+# Create file with spaces in name
+$filename = "Project Overview 2024.txt"
 New-Item -Path $filename -ItemType File -Force | Out-Null
-Write-Host "Datei erstellt: $filename"
+Write-Host "File created: $filename"
 
-# Write content with German characters
+# Write content
 @"
-Größenübersicht
+Project Overview
 ===============
 
-Äpfel: 10 Stück
-Größe: 5-7 cm
-Preis: 2,50 €/kg
+Items: 10 pieces
+Size: 5-7 cm
+Price: $2.50/kg
 "@ | Out-File -FilePath $filename -Encoding UTF8
 
-Write-Host "Inhalt geschrieben nach: $filename"
+Write-Host "Content written to: $filename"
 ```
 
 ## Example 2: Cross-Platform Path Handling
@@ -82,7 +74,7 @@ Write-Host "Inhalt geschrieben nach: $filename"
 case "$(uname -s)" in
     Linux*)
         PLATFORM="linux"
-        BASE_PATH="/home/user/Dokumente"
+        BASE_PATH="/home/user/Documents"
         ;;
     Darwin*)
         PLATFORM="mac"
@@ -100,8 +92,8 @@ esac
 
 echo "Platform: $PLATFORM"
 
-# Create directory with German name and spaces
-dir_name="Meine Übungen 2024"
+# Create directory with spaces in name
+dir_name="My Projects 2024"
 full_path="$BASE_PATH/$dir_name"
 
 # Create directory (properly quoted)
@@ -112,14 +104,14 @@ echo "Created: $full_path"
 cd "$full_path" || exit 1
 
 files=(
-    "Übung 1 - Einführung.txt"
-    "Übung 2 - Größen.txt"
-    "Übung 3 - Maße.txt"
+    "Exercise 1 - Introduction.txt"
+    "Exercise 2 - Sizes.txt"
+    "Exercise 3 - Measurements.txt"
 )
 
 for file in "${files[@]}"; do
     touch "$file"
-    echo "Erstellt: $file"
+    echo "Created: $file"
 done
 
 # List files
@@ -136,8 +128,8 @@ Write-Host "Platform: $PLATFORM"
 # Base path for Windows
 $BasePath = "$env:USERPROFILE\Documents"
 
-# Create directory with German name and spaces
-$dirName = "Meine Übungen 2024"
+# Create directory with spaces in name
+$dirName = "My Projects 2024"
 $fullPath = Join-Path $BasePath $dirName
 
 # Create directory
@@ -148,87 +140,21 @@ Write-Host "Created: $fullPath"
 Set-Location $fullPath
 
 $files = @(
-    "Übung 1 - Einführung.txt",
-    "Übung 2 - Größen.txt",
-    "Übung 3 - Maße.txt"
+    "Exercise 1 - Introduction.txt",
+    "Exercise 2 - Sizes.txt",
+    "Exercise 3 - Measurements.txt"
 )
 
 foreach ($file in $files) {
     New-Item -Path $file -ItemType File -Force | Out-Null
-    Write-Host "Erstellt: $file"
+    Write-Host "Created: $file"
 }
 
 # List files
 Get-ChildItem
 ```
 
-## Example 3: Permission Management Across Platforms
-
-**Scenario:** Set executable permissions on a script across Unix and Windows.
-
-```bash
-#!/usr/bin/env bash
-
-script_name="deploy.sh"
-
-# Create the script
-cat > "$script_name" << 'EOF'
-#!/usr/bin/env bash
-echo "Deployment script running..."
-EOF
-
-# Detect platform and set permissions
-if command -v chmod &> /dev/null; then
-    # Unix/Linux/macOS
-    chmod +x "$script_name"
-    echo "Set executable permission with chmod"
-    ls -la "$script_name"
-elif command -v icacls &> /dev/null; then
-    # Windows - grant execute permission
-    icacls "$script_name" /grant:r "%USERNAME%:(RX)"
-    echo "Set Windows ACL for execute permission"
-    icacls "$script_name"
-else
-    echo "Warning: Unable to set permissions"
-fi
-
-# Try to execute
-if [ -x "$script_name" ]; then
-    ./"$script_name"
-else
-    bash "$script_name"
-fi
-```
-
-**PowerShell equivalent:**
-
-```powershell
-$scriptName = "deploy.ps1"
-
-# Create the script
-@"
-Write-Host "Deployment script running..."
-"@ | Out-File -FilePath $scriptName -Encoding UTF8
-
-# Windows doesn't need execute permissions for .ps1 files
-# But we can set the execution policy or ACLs
-
-# Set ACL to allow current user full control
-$acl = Get-Acl $scriptName
-$user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-$permission = "$user","FullControl","Allow"
-$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule $permission
-$acl.SetAccessRule($accessRule)
-Set-Acl $scriptName $acl
-
-Write-Host "Set Windows ACL for full control"
-Get-Acl $scriptName | Format-List
-
-# Execute (if execution policy allows)
-& ".\$scriptName"
-```
-
-## Example 4: Escaping Special Characters
+## Example 3: Escaping Special Characters
 
 **Scenario:** Handle strings with special characters in different shells.
 
@@ -311,7 +237,587 @@ for /f "tokens=*" %%i in ('date /t') do set current_date=%%i
 echo Date: %current_date%
 ```
 
-## Example 5: Complete Cross-Platform Utility Script
+## Example 4: PowerShell Here-Strings
+
+**Scenario:** Using PowerShell here-strings for literal and expandable multi-line content.
+
+```powershell
+# ========================================
+# PowerShell Here-Strings
+# ========================================
+
+# Expandable here-string (double quotes)
+# Variables are expanded, special characters are interpreted
+$username = "JohnDoe"
+$path = "C:\Users\$username"
+
+$expandableString = @"
+User: $username
+Path: $path
+Date: $(Get-Date -Format 'yyyy-MM-dd')
+Price: `$100.00
+"@
+
+Write-Host $expandableString
+
+# Literal here-string (single quotes)
+# Everything is literal, no expansion
+$literalString = @'
+User: $username
+Path: $path
+Special chars: \ $ @ " ' `
+No escaping needed!
+"Quotes" and 'apostrophes' work fine.
+Even backticks ` don't escape anything here.
+'@
+
+Write-Host $literalString
+
+# Common use case: SQL queries
+$sqlQuery = @"
+SELECT * FROM Users
+WHERE Name = 'O''Brien'
+  AND Path = 'C:\Program Files\App'
+  AND Status = 'Active'
+"@
+
+# Invoke-SqlCmd -Query $sqlQuery
+
+# Common use case: JSON data
+$jsonData = @'
+{
+  "user": {
+    "name": "O'Brien",
+    "path": "C:\\Users\\user\\My Files",
+    "metadata": {
+      "role": "admin",
+      "status": "active"
+    }
+  }
+}
+'@
+
+$object = $jsonData | ConvertFrom-Json
+
+# Common use case: XML/HTML
+$htmlContent = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>$username's Page</title>
+</head>
+<body>
+    <h1>Welcome $username!</h1>
+    <p>Path: $path</p>
+</body>
+</html>
+"@
+
+# Common use case: Multi-line regex
+$regexPattern = @'
+(?x)                    # Enable verbose mode
+^                       # Start of line
+\d{3}                   # Three digits
+[-\s]?                  # Optional dash or space
+\d{3}                   # Three digits
+[-\s]?                  # Optional dash or space
+\d{4}                   # Four digits
+$                       # End of line
+'@
+
+if ("555-123-4567" -match $regexPattern) {
+    Write-Host "Phone number is valid"
+}
+```
+
+**Bash heredoc equivalent:**
+
+```bash
+#!/usr/bin/env bash
+
+# Expandable heredoc (quotes can be omitted or use double quotes)
+username="JohnDoe"
+path="/home/$username"
+
+cat << EOF
+User: $username
+Path: $path
+Date: $(date +%Y-%m-%d)
+Price: \$100.00
+EOF
+
+# Literal heredoc (single quotes prevent expansion)
+cat << 'EOF'
+User: $username
+Path: $path
+Special chars: \ $ @ " '
+No escaping needed!
+"Quotes" and 'apostrophes' work fine.
+EOF
+
+# Store in variable
+sql_query=$(cat << 'EOF'
+SELECT * FROM Users
+WHERE Name = 'O\'Brien'
+  AND Path = '/usr/local/app'
+  AND Status = 'Active'
+EOF
+)
+```
+
+## Example 5: PowerShell Stop-Parsing Token (--%​)
+
+**Scenario:** Using the stop-parsing token to pass arguments literally to external programs.
+
+```powershell
+# ========================================
+# PowerShell Stop-Parsing Token (--%)
+# ========================================
+
+# Problem: PowerShell interprets arguments before passing to external program
+# This often breaks when calling CMD, Git, or other external tools
+
+# ❌ WRONG - PowerShell interprets the quotes and variables
+git commit -m "Fix user's "profile" bug"  # BROKEN
+
+# ❌ WRONG - Even escaping can be problematic
+git commit -m "Fix user's `"profile`" bug"  # Still tricky
+
+# ✅ CORRECT - Use stop-parsing token
+git commit --% -m "Fix user's "profile" bug"
+
+# The --% tells PowerShell to stop interpreting and pass everything literally
+
+# Example: Calling CMD commands
+cmd --% /c dir "C:\Program Files" /s
+
+# Example: Calling icacls with complex arguments
+icacls --% "C:\My Files\test.txt" /grant:r "Domain\User:(RX)"
+
+# Example: Git with complex commit messages
+git commit --% -m "Feature: Support O'Brien's "special" characters"
+
+# Example: Calling curl with complex arguments
+curl --% -X POST -H "Content-Type: application/json" -d "{\"name\":\"John\"}" http://api.example.com
+
+# Example: Docker with quotes
+docker run --% --name "my-container" -v "C:\My Files:/data" ubuntu bash
+
+# ⚠️ LIMITATION: Cannot mix variables with --%
+# This does NOT work:
+# $user = "JohnDoe"
+# icacls --% $file /grant:r "$user:(RX)"  # $file and $user won't expand
+
+# Workaround: Build the command string first
+$user = "JohnDoe"
+$file = "C:\My Files\test.txt"
+$icaclsArgs = "$file /grant:r `"$user:(RX)`""
+icacls --% $icaclsArgs  # Still problematic
+
+# Better workaround: Use Start-Process with ArgumentList
+$icaclsArgs = @(
+    $file,
+    "/grant:r",
+    "`"$user:(RX)`""
+)
+Start-Process icacls -ArgumentList $icaclsArgs -NoNewWindow -Wait
+
+# Or use cmd /c as intermediary
+cmd /c "icacls `"$file`" /grant:r `"$user:(RX)`""
+```
+
+## Example 6: PowerShell Comparison Operators
+
+**Scenario:** Understanding PowerShell comparison operators and their quoting requirements.
+
+```powershell
+# ========================================
+# PowerShell Comparison Operators
+# ========================================
+
+# PowerShell uses different operators than Bash
+# -eq (equal), -ne (not equal), -gt (greater than), -lt (less than), etc.
+
+# String comparison
+$name = "John"
+
+if ($name -eq "John") {
+    Write-Host "Name is John"
+}
+
+if ($name -ne "Jane") {
+    Write-Host "Name is not Jane"
+}
+
+# Case-sensitive comparison
+if ($name -ceq "john") {
+    Write-Host "Case-sensitive match"  # Won't match
+}
+
+# Numeric comparison
+$count = 10
+
+if ($count -gt 5) {
+    Write-Host "Count is greater than 5"
+}
+
+if ($count -le 20) {
+    Write-Host "Count is less than or equal to 20"
+}
+
+# String contains
+if ($name -like "*oh*") {
+    Write-Host "Name contains 'oh'"
+}
+
+# Regex match
+if ($name -match "^J") {
+    Write-Host "Name starts with J"
+}
+
+# Common mistake when calling from Bash
+# ❌ WRONG - Bash doesn't understand -eq
+# bash -c "if [ $count -eq 10 ]; then echo 'yes'; fi"
+
+# ❌ WRONG from Bash - single = is assignment, not comparison
+# bash -c "if [ $count = 10 ]; then echo 'yes'; fi"
+
+# ✅ CORRECT - Bash uses different syntax
+bash -c 'if [ 10 -eq 10 ]; then echo "yes"; fi'
+
+# Or use double brackets with =
+bash -c 'if [[ "10" == "10" ]]; then echo "yes"; fi'
+
+# When calling PowerShell from Bash with comparison operators
+# ✅ CORRECT - Protect from Bash interpretation
+powershell.exe -Command 'Get-Process | Where-Object {$_.CPU -gt 100}'
+
+# ❌ WRONG - Bash might interpret > as redirect
+# powershell.exe -Command "Get-Process | Where-Object {\$_.CPU > 100}"
+
+# Comparison in Where-Object
+Get-Process | Where-Object {$_.Name -eq "chrome"}
+Get-Process | Where-Object {$_.CPU -gt 50}
+Get-Service | Where-Object {$_.Status -ne "Running"}
+
+# Multiple conditions
+Get-Process | Where-Object {$_.Name -eq "chrome" -and $_.CPU -gt 50}
+Get-Service | Where-Object {$_.Status -eq "Running" -or $_.Status -eq "Starting"}
+
+# When these operators appear in nested commands
+# ✅ CORRECT - From Git Bash
+bash -c 'powershell.exe -Command "Get-Process | Where-Object {\$_.Name -eq \"chrome\"}"'
+
+# ✅ BETTER - Use single quotes to avoid Bash expansion
+bash -c "powershell.exe -Command 'Get-Process | Where-Object {\$_.Name -eq \"chrome\"}'"
+```
+
+**Bash comparison equivalent:**
+
+```bash
+#!/usr/bin/env bash
+
+# Bash uses different comparison operators
+
+# String comparison
+name="John"
+
+if [ "$name" = "John" ]; then
+    echo "Name is John"
+fi
+
+if [ "$name" != "Jane" ]; then
+    echo "Name is not Jane"
+fi
+
+# Or use double brackets (more modern)
+if [[ "$name" == "John" ]]; then
+    echo "Name is John"
+fi
+
+# Numeric comparison (uses -eq, -ne, -gt, -lt)
+count=10
+
+if [ $count -eq 10 ]; then
+    echo "Count equals 10"
+fi
+
+if [ $count -gt 5 ]; then
+    echo "Count is greater than 5"
+fi
+
+# String pattern matching
+if [[ "$name" == *oh* ]]; then
+    echo "Name contains 'oh'"
+fi
+
+# Regex match
+if [[ "$name" =~ ^J ]]; then
+    echo "Name starts with J"
+fi
+```
+
+## Example 7: Calling External Programs from PowerShell
+
+**Scenario:** Properly quoting when calling external programs from PowerShell.
+
+```powershell
+# ========================================
+# Calling External Programs from PowerShell
+# ========================================
+
+# PowerShell's argument parsing can be tricky when calling external programs
+# (programs not written in PowerShell, like .exe, .bat, .cmd files)
+
+# Problem: PowerShell tries to parse arguments before passing them
+
+# ❌ WRONG - PowerShell removes quotes before passing to program
+git.exe commit -m "Fix bug"  # Git receives: Fix bug (no quotes)
+
+# ✅ CORRECT - Escape inner quotes
+git.exe commit -m "`"Fix bug`""
+
+# ✅ BETTER - Use single quotes (literal)
+git commit -m 'Fix bug'
+
+# ✅ BEST - For complex messages, use here-string
+$message = @'
+Fix user's "profile" bug
+
+- Resolved issue with O'Brien's account
+- Updated "Edit Profile" functionality
+'@
+git commit -m $message
+
+# Calling CMD commands
+# ❌ WRONG - Quotes get mangled
+cmd /c dir "C:\Program Files"
+
+# ✅ CORRECT - Use backtick escaping
+cmd /c dir `"C:\Program Files`"
+
+# ✅ CORRECT - Or use --% stop-parsing token
+cmd --% /c dir "C:\Program Files"
+
+# Calling Python scripts
+# ❌ WRONG - Argument with spaces breaks
+python script.py C:\My Files\data.txt
+
+# ✅ CORRECT - Quote the argument
+python script.py "C:\My Files\data.txt"
+
+# ✅ CORRECT - Or use backtick escaping in expandable string
+$path = "C:\My Files\data.txt"
+python script.py "`"$path`""
+
+# Calling Node.js
+# ❌ WRONG - JSON argument breaks
+node app.js {"name":"John"}
+
+# ✅ CORRECT - Use single quotes for JSON
+node app.js '{\"name\":\"John\"}'
+
+# ✅ BETTER - Use here-string
+$jsonConfig = @'
+{"name":"John","role":"admin"}
+'@
+node app.js $jsonConfig
+
+# Calling curl
+# ❌ WRONG - Quotes break
+curl -X POST -d {"name":"John"} http://api.example.com
+
+# ✅ CORRECT - Use single quotes for JSON
+curl -X POST -H 'Content-Type: application/json' -d '{\"name\":\"John\"}' http://api.example.com
+
+# ✅ BEST - Use here-string
+$jsonData = @'
+{"name":"John","role":"admin"}
+'@
+curl -X POST -H 'Content-Type: application/json' -d $jsonData http://api.example.com
+
+# Calling Docker
+# ❌ WRONG - Path with spaces breaks
+docker run -v C:\My Files:/data ubuntu
+
+# ✅ CORRECT - Quote the path
+docker run -v "C:\My Files:/data" ubuntu
+
+# ✅ CORRECT - With expanded variable
+$hostPath = "C:\My Files"
+docker run -v "`"${hostPath}:/data`"" ubuntu
+
+# Using Start-Process for better control
+# ✅ BEST PRACTICE - Use ArgumentList for complex arguments
+$arguments = @(
+    '-v',
+    'C:\My Files:/data',
+    'ubuntu',
+    'bash'
+)
+Start-Process docker -ArgumentList $arguments -NoNewWindow -Wait
+
+# Calling Az CLI
+# Complex quoting scenario
+az vm create --name "MyVM" --resource-group "MyRG" --image "UbuntuLTS"
+
+# With JSON parameters
+$tags = @'
+{"Environment":"Production","Owner":"John"}
+'@
+az vm create --name "MyVM" --resource-group "MyRG" --tags $tags
+
+# Call operator & for programs with spaces in path
+& "C:\Program Files\My App\app.exe" --arg1 value1
+
+# With arguments containing quotes
+& "C:\Program Files\My App\app.exe" --message "`"Hello World`""
+```
+
+## Example 8: Azure CLI Quoting Differences
+
+**Scenario:** Azure CLI behaves differently on Windows vs Unix due to shell differences.
+
+```powershell
+# ========================================
+# Azure CLI Quoting - Windows PowerShell
+# ========================================
+
+# Azure CLI (az) has different quoting requirements on Windows vs Linux/macOS
+
+# Simple command (no difference)
+az group list --output table
+
+# JSON parameters - Windows PowerShell
+# ✅ CORRECT - Use single quotes for outer, double quotes for JSON
+az vm create `
+  --name "MyVM" `
+  --resource-group "MyRG" `
+  --image "UbuntuLTS" `
+  --tags '{"Environment":"Production","Owner":"John"}'
+
+# ✅ CORRECT - Or escape double quotes
+az vm create `
+  --name "MyVM" `
+  --resource-group "MyRG" `
+  --image "UbuntuLTS" `
+  --tags "{`"Environment`":`"Production`",`"Owner`":`"John`"}"
+
+# ✅ BEST - Use here-string
+$tags = @'
+{"Environment":"Production","Owner":"John"}
+'@
+az vm create --name "MyVM" --resource-group "MyRG" --tags $tags
+
+# Complex query with JMESPath
+# ❌ WRONG - Quotes break the query
+az vm list --query "[?location=='eastus']"
+
+# ✅ CORRECT - Use backtick escaping
+az vm list --query "[?location==``'eastus``']"
+
+# ✅ BETTER - Use single quotes (literal)
+az vm list --query '[?location==`"eastus`"]'
+
+# ✅ BEST - Use here-string for complex queries
+$query = @'
+[?location=='eastus' && powerState=='Running'].{Name:name,RG:resourceGroup}
+'@
+az vm list --query $query --output table
+
+# Creating resources with complex JSON
+$vmConfig = @'
+{
+  "location": "eastus",
+  "properties": {
+    "hardwareProfile": {
+      "vmSize": "Standard_DS1_v2"
+    },
+    "storageProfile": {
+      "imageReference": {
+        "publisher": "Canonical",
+        "offer": "UbuntuServer",
+        "sku": "18.04-LTS"
+      }
+    },
+    "osProfile": {
+      "computerName": "myVM",
+      "adminUsername": "azureuser"
+    }
+  }
+}
+'@
+
+# Save to file and use @file.json syntax
+$vmConfig | Out-File -FilePath vm.json -Encoding UTF8
+az vm create --name "MyVM" --resource-group "MyRG" --parameters '@vm.json'
+
+# Or pass inline (not recommended for complex JSON)
+az deployment group create --resource-group "MyRG" --template-file template.json --parameters $vmConfig
+```
+
+```bash
+#!/usr/bin/env bash
+
+# ========================================
+# Azure CLI Quoting - Linux/macOS/Git Bash
+# ========================================
+
+# Simple command (no difference)
+az group list --output table
+
+# JSON parameters - Unix shells
+# ✅ CORRECT - Use single quotes for JSON (prevents shell expansion)
+az vm create \
+  --name "MyVM" \
+  --resource-group "MyRG" \
+  --image "UbuntuLTS" \
+  --tags '{"Environment":"Production","Owner":"John"}'
+
+# Complex query with JMESPath
+# ✅ CORRECT - Single quotes protect from shell
+az vm list --query '[?location==`eastus`]' --output table
+
+# ✅ CORRECT - For complex queries
+az vm list --query '[?location==`eastus` && powerState==`Running`].{Name:name,RG:resourceGroup}' --output table
+
+# Creating resources with complex JSON
+vm_config=$(cat <<'EOF'
+{
+  "location": "eastus",
+  "properties": {
+    "hardwareProfile": {
+      "vmSize": "Standard_DS1_v2"
+    },
+    "storageProfile": {
+      "imageReference": {
+        "publisher": "Canonical",
+        "offer": "UbuntuServer",
+        "sku": "18.04-LTS"
+      }
+    },
+    "osProfile": {
+      "computerName": "myVM",
+      "adminUsername": "azureuser"
+    }
+  }
+}
+EOF
+)
+
+# Save to file
+echo "$vm_config" > vm.json
+az vm create --name "MyVM" --resource-group "MyRG" --parameters '@vm.json'
+
+# Key difference: Windows often needs more escaping due to PowerShell interpretation
+# Unix shells with single quotes keep everything literal
+
+# Calling Az CLI from PowerShell in WSL/Git Bash
+# ✅ CORRECT
+bash -c 'az vm list --query "[?location==\`eastus\`]" --output table'
+```
+
+## Example 9: Complete Cross-Platform Utility Script
 
 **Scenario:** A utility script that detects environment and adapts accordingly.
 
@@ -320,7 +826,7 @@ echo Date: %current_date%
 
 # ============================================
 # Cross-Platform File Manager
-# Handles German characters and permissions
+# Handles paths with spaces and special characters
 # ============================================
 
 # Colors (if supported)
@@ -355,18 +861,6 @@ detect_environment() {
     echo "${GREEN}Environment:${RESET} $SHELL_TYPE on $PLATFORM"
 }
 
-# Set proper encoding
-set_encoding() {
-    if [ "$PLATFORM" = "windows" ]; then
-        export LANG=de_DE.UTF-8
-        export LC_ALL=de_DE.UTF-8
-    else
-        export LANG=de_DE.UTF-8
-        export LC_ALL=de_DE.UTF-8
-    fi
-    echo "${GREEN}Encoding:${RESET} UTF-8 (German)"
-}
-
 # Create directory with proper quoting
 create_directory() {
     local dir_name="$1"
@@ -380,74 +874,58 @@ create_directory() {
     echo "${GREEN}Created directory:${RESET} $dir_name"
 }
 
-# Set permissions (cross-platform)
-set_permissions() {
-    local file="$1"
-    local mode="$2"
+# Process files with spaces in names
+process_files() {
+    local search_dir="${1:-.}"
 
-    if [ ! -e "$file" ]; then
-        echo "${RED}Error:${RESET} File not found: $file"
-        return 1
-    fi
+    echo "${GREEN}Processing files in:${RESET} $search_dir"
 
-    if command -v chmod &> /dev/null; then
-        chmod "$mode" "$file"
-        echo "${GREEN}Permissions set:${RESET} $mode on $file"
-    elif command -v icacls &> /dev/null; then
-        echo "${YELLOW}Windows detected:${RESET} Using icacls"
-        icacls "$file" /grant:r "%USERNAME%:(RX)"
-    else
-        echo "${RED}Error:${RESET} Cannot set permissions"
-        return 1
-    fi
+    # Use find with -print0 and read with -d '' for files with special characters
+    while IFS= read -r -d '' file; do
+        echo "  Processing: $file"
+        # Add processing logic here
+    done < <(find "$search_dir" -type f -name "*.txt" -print0)
 }
 
 # Main execution
 main() {
     detect_environment
-    set_encoding
 
-    # Create test directory with German characters
-    test_dir="Test Übersicht"
+    # Create test directory with spaces
+    test_dir="Test Projects 2024"
     create_directory "$test_dir"
 
     # Create test files
     cd "$test_dir" || exit 1
 
     test_files=(
-        "Größentabelle.txt"
-        "Übersicht Äpfel.txt"
-        "Maße und Gewichte.txt"
+        "Size Chart.txt"
+        "Overview Report.txt"
+        "Measurements and Weights.txt"
+        "File with 'quotes'.txt"
     )
 
     for file in "${test_files[@]}"; do
         touch "$file"
-        echo "Test content with Umlauts: äöüß ÄÖÜ" > "$file"
+        echo "Test content for: $file" > "$file"
         echo "${GREEN}Created:${RESET} $file"
     done
-
-    # Create a script and make it executable
-    script_name="test_script.sh"
-    cat > "$script_name" << 'EOF'
-#!/usr/bin/env bash
-echo "Script executed successfully!"
-EOF
-
-    set_permissions "$script_name" "755"
 
     # List all files
     echo ""
     echo "${GREEN}Files created:${RESET}"
     ls -la
 
+    # Process files
     cd ..
+    process_files "$test_dir"
 }
 
 # Run
 main
 ```
 
-## Example 6: Handling Quotes in File Names
+## Example 10: Handling Quotes in File Names
 
 **Scenario:** Work with file names containing quotes, apostrophes, and special characters.
 
@@ -459,7 +937,7 @@ files=(
     "File with 'single quotes'.txt"
     'File with "double quotes".txt'
     "File with both 'single' and \"double\" quotes.txt"
-    "Größe 10cm - Version 1.0.txt"
+    "O'Brien's File - Version 1.0.txt"
 )
 
 # Create files safely
@@ -484,7 +962,7 @@ for file in "${files[@]}"; do
 done
 ```
 
-## Example 7: Nested Quoting - The Most Common Pain Point
+## Example 11: Nested Quoting - The Most Common Pain Point
 
 **Scenario:** Complex nested command scenarios that cause repeated iterations and failures.
 
@@ -505,6 +983,12 @@ powershell.exe -Command "Get-Process | Where-Object {\$_.Name -eq 'chrome'}"
 
 # ✅ CORRECT - Complex example with paths
 powershell.exe -Command 'Get-Content "C:\Program Files\My App\config.txt" | Select-String "pattern"'
+
+# ✅ CORRECT - With comparison operators
+powershell.exe -Command 'Get-Process | Where-Object {$_.CPU -gt 100}'
+
+# ✅ CORRECT - Multiple conditions
+powershell.exe -Command 'Get-Service | Where-Object {$_.Status -eq "Running" -and $_.Name -like "win*"}'
 ```
 
 ### Bash from PowerShell
@@ -529,6 +1013,108 @@ $bashCmd = @'
 grep "error" /var/log/app.log | awk '{print $1}' | sort | uniq
 '@
 bash -c $bashCmd
+```
+
+### Calling PowerShell from CMD
+
+```cmd
+REM Running in CMD, calling PowerShell
+
+REM ❌ WRONG - Quotes break
+powershell.exe -Command "Get-Process | Where-Object {$_.Name -eq 'chrome'}"
+
+REM ✅ CORRECT - Use escaped quotes
+powershell.exe -Command "Get-Process | Where-Object {$_.Name -eq 'chrome'}"
+
+REM ✅ BETTER - Use single quotes
+powershell.exe -Command 'Get-Process | Where-Object {$_.Name -eq "chrome"}'
+
+REM ✅ BEST - Use -File parameter with script file
+echo Get-Process | Where-Object {$_.Name -eq "chrome"} > temp.ps1
+powershell.exe -File temp.ps1
+del temp.ps1
+```
+
+### Calling CMD from PowerShell
+
+```powershell
+# Running in PowerShell, calling CMD
+
+# ❌ WRONG - Quotes get mangled
+cmd /c dir "C:\Program Files"
+
+# ✅ CORRECT - Use --% stop-parsing token
+cmd --% /c dir "C:\Program Files"
+
+# ✅ CORRECT - Use backtick escaping
+cmd /c dir `"C:\Program Files`"
+
+# ✅ CORRECT - Calling CMD batch file with arguments
+cmd /c mybatch.bat `"C:\My Files`" `"Output Dir`"
+
+# ✅ CORRECT - Complex CMD command
+cmd --% /c for /f "tokens=*" %i in ('dir /b *.txt') do echo %i
+
+# ✅ BEST - For very complex cases, create temporary .cmd file
+$cmdScript = @'
+@echo off
+for /f "tokens=*" %%i in ('dir /b *.txt') do (
+    echo Processing: %%i
+)
+'@
+$cmdScript | Out-File -FilePath temp.cmd -Encoding ASCII
+cmd /c temp.cmd
+Remove-Item temp.cmd
+```
+
+### Windows Paths with Spaces in Commands
+
+```bash
+#!/usr/bin/env bash
+# Running on Git Bash on Windows
+
+# ❌ WRONG - Path with spaces breaks
+cd C:\Program Files\My App
+/c/Program Files/My App/app.exe
+
+# ✅ CORRECT - Quote the path
+cd "/c/Program Files/My App"
+"/c/Program Files/My App/app.exe"
+
+# ✅ CORRECT - Calling PowerShell with Windows path with spaces
+powershell.exe -Command 'Get-Content "C:\Program Files\My App\config.txt"'
+
+# ✅ CORRECT - Passing path to Windows program
+powershell.exe -Command "& 'C:\Program Files\My App\app.exe' --arg1 value1"
+
+# ✅ CORRECT - Complex: Bash -> PowerShell -> Windows program with spaces
+powershell.exe -Command '& "C:\Program Files\My App\app.exe" --config "C:\My Files\config.txt"'
+```
+
+```powershell
+# Running in PowerShell
+
+# ❌ WRONG - Path with spaces breaks
+cd C:\Program Files\My App
+C:\Program Files\My App\app.exe
+
+# ✅ CORRECT - Quote the path
+cd "C:\Program Files\My App"
+& "C:\Program Files\My App\app.exe"
+
+# ✅ CORRECT - With arguments
+& "C:\Program Files\My App\app.exe" --config "C:\My Files\config.txt"
+
+# ✅ CORRECT - Calling from CMD
+cmd /c "`"C:\Program Files\My App\app.exe`" --arg1 value1"
+
+# ✅ BEST - Use Start-Process for complex scenarios
+Start-Process "C:\Program Files\My App\app.exe" -ArgumentList @(
+    '--config',
+    'C:\My Files\config.txt',
+    '--output',
+    'C:\My Files\Output'
+) -NoNewWindow -Wait
 ```
 
 ### Git Commit with Complex Messages
@@ -582,7 +1168,7 @@ docker exec mycontainer bash -c 'mysql -e "SELECT * FROM users WHERE name=\"John
 docker exec mycontainer bash -c 'grep "ERROR" /var/log/app.log | tail -n 20'
 
 # ✅ CORRECT - With file paths containing spaces
-docker exec mycontainer bash -c 'cat "/app/My Files/Größenübersicht.txt"'
+docker exec mycontainer bash -c 'cat "/app/My Files/data.txt"'
 
 # ✅ BEST - For very complex cases, use heredoc
 docker exec mycontainer bash -c "$(cat <<'EOF'
@@ -600,6 +1186,14 @@ docker exec mycontainer bash -c 'mysql -e "SELECT * FROM users"'
 
 # ✅ CORRECT - Double single quotes for literal single quotes in SQL
 docker exec mycontainer bash -c 'mysql -e "SELECT * FROM users WHERE name=''John''"'
+
+# ✅ BEST - Use here-string for complex commands
+$dockerCmd = @'
+cd /app
+mysql -e "SELECT * FROM users WHERE name='O\"Brien'"
+grep "error" "log files/app.log"
+'@
+docker exec mycontainer bash -c $dockerCmd
 ```
 
 ### SSH with Nested Commands
@@ -626,6 +1220,25 @@ cat > /tmp/remote_script.sh << 'EOF'
 docker exec mycontainer bash -c 'mysql -e "SELECT * FROM users WHERE name=\"admin\""'
 EOF
 
+scp /tmp/remote_script.sh user@remote:/tmp/
+ssh user@remote 'bash /tmp/remote_script.sh'
+```
+
+**From PowerShell:**
+```powershell
+# ✅ CORRECT - Use single quotes for remote commands
+ssh user@remote 'grep "error" /var/log/syslog'
+
+# ✅ CORRECT - Multiple nested levels
+ssh user@remote 'docker exec container bash -c "grep \\"error\\" /var/log/app.log"'
+
+# ✅ BEST - Use here-string for complex commands
+$remoteScript = @'
+#!/bin/bash
+docker exec mycontainer bash -c 'mysql -e "SELECT * FROM users WHERE name=\"admin\""'
+'@
+
+$remoteScript | Out-File -FilePath /tmp/remote_script.sh -Encoding UTF8
 scp /tmp/remote_script.sh user@remote:/tmp/
 ssh user@remote 'bash /tmp/remote_script.sh'
 ```
@@ -808,6 +1421,16 @@ echo "He said: \"She's from the \\\"Big Apple\\\"\"" # HARD TO READ
 
 # ❌ ANTI-PATTERN 5: Not testing each nesting level separately
 ssh host "docker exec c bash -c "mysql -e "SELECT * FROM t"""  # IMPOSSIBLE TO DEBUG
+
+# ❌ ANTI-PATTERN 6: Using wrong comparison operators across shells
+bash -c "if [ \$count -eq 10 ]; then echo 'yes'; fi"  # Correct for Bash
+powershell.exe -Command "if (\$count == 10) { Write-Host 'yes' }"  # WRONG - use -eq
+
+# ❌ ANTI-PATTERN 7: Not using stop-parsing token in PowerShell
+git commit -m "Fix O'Brien's "profile" bug"  # BROKEN in PowerShell
+
+# ❌ ANTI-PATTERN 8: Mixing --% with variables
+powershell.exe -Command "icacls --% $file /grant:r 'User:(RX)'"  # $file won't expand
 ```
 
 ### Best Practice Summary
@@ -851,6 +1474,24 @@ ssh host 'bash ./script.sh'
 # Level 3: Bash command inside container
 # Level 4: MySQL query with quotes
 ssh host 'docker exec c bash -c "mysql -e \"SELECT * FROM t\""'
+
+# ✅ Rule 6: Use here-strings in PowerShell for multi-line content
+# See PowerShell examples above
+
+# ✅ Rule 7: Use --% in PowerShell when calling external programs with complex args
+# See PowerShell stop-parsing token examples above
+
+# ✅ Rule 8: Know your comparison operators
+# Bash: -eq, -ne, -gt, -lt for numbers; =, != for strings
+# PowerShell: -eq, -ne, -gt, -lt for everything
+# Don't mix them across shells
+
+# ✅ Rule 9: Use proper escaping for paths with spaces
+# Always quote: "C:\Program Files\App"
+# In PowerShell call operator: & "C:\Program Files\App\app.exe"
+
+# ✅ Rule 10: For Azure CLI, use here-strings for complex JSON/queries
+# Avoids quoting hell with JMESPath queries
 ```
 
-These examples demonstrate the key concepts from the quotefix skill in practical scenarios.
+These examples demonstrate the key concepts from the quotefix skill in practical scenarios, with special emphasis on Windows-specific challenges and PowerShell quoting complexities.

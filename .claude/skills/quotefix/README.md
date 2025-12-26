@@ -1,16 +1,14 @@
 # Quotefix Skill
 
-A Claude Code skill that automatically detects shell environments (PowerShell, Bash, Zsh, Fish, CMD) and adjusts command syntax for quoting, escape symbols, German language characters, and file permissions.
+A Claude Code skill that automatically detects shell environments (PowerShell, Bash, Zsh, Fish, CMD) and provides correct quoting and escaping syntax for cross-shell command execution.
 
 ## Features
 
 - **Shell Detection**: Automatically detects Bash, Zsh, Fish, PowerShell, CMD, and other shells
-- **Platform Detection**: Identifies Linux, macOS, and Windows environments
-- **Quote Handling**: Applies correct quoting rules for each shell type
-- **Escape Characters**: Uses the right escape sequences (backslash, backtick, caret)
-- **German Language Support**: Properly handles Umlauts (ä, ö, ü, ß) and special characters
-- **Permission Management**: Cross-platform file permission handling (chmod, icacls)
-- **UTF-8 Encoding**: Ensures correct encoding for international characters
+- **Quoting Rules**: Applies correct quoting rules for each shell type
+- **Escape Characters**: Uses the right escape sequences (\ vs ` vs ^)
+- **Nested Command Handling**: Handles SSH, Docker, and cross-shell command nesting
+- **PowerShell-specific patterns**: Here-strings, stop-parsing token, and special operators
 
 ## Installation
 
@@ -26,9 +24,9 @@ Claude Code will automatically detect and use this skill when relevant.
 The skill will be used automatically when:
 - Executing shell commands that differ between shells
 - Working with file paths containing spaces or special characters
-- Handling German language characters in filenames or content
-- Setting file permissions on different platforms
+- Handling nested commands (SSH, Docker, remote execution)
 - Writing cross-platform scripts
+- Dealing with PowerShell-specific syntax requirements
 
 ## File Structure
 
@@ -64,48 +62,79 @@ $PSVersionTable.PSVersion
 if ($PSVersionTable) { Write-Host "PowerShell" }
 ```
 
-### Create File with German Characters
+### PowerShell Quoting Examples
 
-**Bash:**
-```bash
-export LANG=de_DE.UTF-8
-filename="Größenübersicht.txt"
-touch "$filename"
-echo "Größe: 100 cm" > "$filename"
-```
-
-**PowerShell:**
+**Using Backtick for Escaping:**
 ```powershell
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$filename = "Größenübersicht.txt"
-New-Item -Path $filename -ItemType File
-"Größe: 100 cm" | Out-File -FilePath $filename -Encoding UTF8
+# Escape special characters
+Write-Host "Line 1`nLine 2"  # Newline
+Write-Host "Tab`tSeparated"  # Tab
+$path = "C:\`$temp\`"quoted`" folder"  # Escape $ and quotes
 ```
 
-### Set File Permissions
-
-**Unix/Linux/macOS (Bash):**
-```bash
-chmod 755 script.sh
-chmod u+x script.sh
-ls -la script.sh
-```
-
-**Windows (PowerShell):**
+**Using Here-Strings:**
 ```powershell
-$acl = Get-Acl script.ps1
-$permission = "$env:USERNAME","FullControl","Allow"
-$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule $permission
-$acl.SetAccessRule($accessRule)
-Set-Acl script.ps1 $acl
+# Single-quoted here-string (literal)
+$text = @'
+Everything in here is literal
+$variables are not expanded
+"Quotes" work without escaping
+'@
+
+# Double-quoted here-string (with expansion)
+$name = "World"
+$text = @"
+Hello, $name!
+Variables are expanded here
+"@
 ```
 
-**Windows (CMD with icacls):**
-```cmd
-icacls script.bat /grant %USERNAME%:F
+**Using Stop-Parsing Token:**
+```powershell
+# Everything after --% is treated literally
+icacls C:\path\to\file --% /grant *S-1-1-0:(OI)(CI)F
+```
+
+### Nested Command Examples
+
+**SSH with Bash:**
+```bash
+# Simple nested command
+ssh user@host 'echo "Hello from remote"'
+
+# Double nesting
+ssh user@host "bash -c 'echo \"Nested quotes\"'"
+
+# With variables
+var="test"
+ssh user@host "echo \"Value: $var\""
+```
+
+**SSH from PowerShell:**
+```powershell
+# Simple nested command
+ssh user@host 'echo "Hello from remote"'
+
+# Double nesting with backtick escaping
+ssh user@host "bash -c 'echo \`"Nested quotes\`"'"
+
+# With variables
+$var = "test"
+ssh user@host "echo \`"Value: $var\`""
+```
+
+**Docker Exec:**
+```bash
+# Bash to Docker
+docker exec container bash -c 'echo "Inside container"'
+
+# PowerShell to Docker
+docker exec container bash -c "echo `"Inside container`""
 ```
 
 ## Quoting Quick Reference
+
+### Basic Quoting Rules
 
 | Shell | Variable Expansion | Literal String | Escape Char |
 |-------|-------------------|----------------|-------------|
@@ -114,31 +143,88 @@ icacls script.bat /grant %USERNAME%:F
 | CMD | `%var%` | N/A | `^` |
 | Fish | `"$var"` | `'literal'` | N/A (use quotes) |
 
-## German Character Encoding
+### Escape Character Usage
 
-| Shell | Command |
-|-------|---------|
-| Bash/Zsh | `export LANG=de_DE.UTF-8` |
-| PowerShell | `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8` |
-| CMD | `chcp 65001` |
+| Shell | Newline | Tab | Quote | Dollar Sign |
+|-------|---------|-----|-------|-------------|
+| Bash | `\n` | `\t` | `\"` or `\'` | `\$` |
+| PowerShell | `` `n `` | `` `t `` | `` `" `` or `'` | `` `$ `` |
+| CMD | N/A | N/A | `^"` | N/A |
 
-## Platform-Specific Path Separators
+### PowerShell Special Operators
 
-- **Unix/Linux/macOS**: `/` (forward slash)
-- **Windows**: `\` (backslash) - but PowerShell accepts both `/` and `\`
+| Operator | Purpose | Example |
+|----------|---------|---------|
+| `` ` `` | Escape character | `` `n ``, `` `t ``, `` `$ `` |
+| `@' ... '@` | Single-quoted here-string | Literal multi-line text |
+| `@" ... "@` | Double-quoted here-string | Expanding multi-line text |
+| `--%` | Stop-parsing token | Legacy command compatibility |
+| `$( )` | Subexpression | `"Result: $(Get-Date)"` |
+| `@( )` | Array subexpression | `$items = @(Get-ChildItem)` |
+
+## Cross-Shell Compatibility Patterns
+
+### Bash to PowerShell
+
+```bash
+# Bash
+echo "Path: /home/user/My Documents"
+var="test"
+echo "Value: $var"
+```
+
+```powershell
+# PowerShell equivalent
+Write-Host "Path: C:\Users\user\My Documents"
+$var = "test"
+Write-Host "Value: $var"
+```
+
+### PowerShell to Bash
+
+```powershell
+# PowerShell
+Get-Content "file with spaces.txt" | Where-Object { $_ -match "pattern" }
+```
+
+```bash
+# Bash equivalent
+grep "pattern" "file with spaces.txt"
+```
+
+### CMD to PowerShell
+
+```cmd
+REM CMD
+set VAR=value
+echo %VAR%
+```
+
+```powershell
+# PowerShell equivalent
+$env:VAR = "value"
+Write-Host $env:VAR
+```
 
 ## Common Pitfalls
 
 1. **Not quoting variables**: Always use `"$var"` in Bash to prevent word splitting
 2. **Wrong escape character**: Bash uses `\`, PowerShell uses `` ` ``, CMD uses `^`
-3. **Missing encoding setup**: Set UTF-8 before working with German characters
-4. **Platform assumptions**: Always detect the platform before using platform-specific commands
-5. **Path separators**: Use the correct separator for the target platform
+3. **Nested quote confusion**: Each shell layer requires its own escaping strategy
+4. **PowerShell string interpolation**: Use `'literal'` to prevent expansion, `"$var"` to allow it
+5. **Cross-shell assumptions**: PowerShell and Bash have fundamentally different quoting models
+
+## Platform-Specific Path Separators
+
+- **Unix/Linux/macOS**: `/` (forward slash)
+- **Windows CMD**: `\` (backslash)
+- **PowerShell**: Both `/` and `\` work (PowerShell normalizes them)
 
 ## Testing the Skill
 
 Create a test script to verify the skill works:
 
+**Bash:**
 ```bash
 # test_skill.sh
 #!/usr/bin/env bash
@@ -150,18 +236,32 @@ if [ -n "$BASH_VERSION" ]; then
     echo "✓ Detected Bash"
 fi
 
-# Test 2: Create file with Umlauts
-filename="Test_Größe.txt"
-touch "$filename"
-echo "✓ Created file with German characters: $filename"
+# Test 2: Nested quoting
+result=$(echo "Outer 'inner' quotes")
+echo "✓ Nested quotes work: $result"
 
-# Test 3: Set permissions
-chmod 644 "$filename"
-echo "✓ Set permissions"
+# Test 3: Escaping
+echo "Line 1\nLine 2"
+echo "✓ Escape sequences work"
+```
 
-# Cleanup
-rm "$filename"
-echo "✓ Cleanup complete"
+**PowerShell:**
+```powershell
+# test_skill.ps1
+Write-Host "Testing Quotefix..."
+
+# Test 1: Shell detection
+if ($PSVersionTable) {
+    Write-Host "✓ Detected PowerShell"
+}
+
+# Test 2: Nested quoting
+$result = "Outer 'inner' quotes"
+Write-Host "✓ Nested quotes work: $result"
+
+# Test 3: Escaping
+Write-Host "Line 1`nLine 2"
+Write-Host "✓ Escape sequences work"
 ```
 
 ## See Also

@@ -1,6 +1,6 @@
 ---
 name: quotefix
-description: Detects the current shell environment (PowerShell, Bash, Zsh, Fish, CMD, etc.) and automatically adjusts command syntax for quoting, escape symbols, German language characters (Umlauts), and file permissions. Use when executing shell commands to ensure compatibility across different operating systems and shell environments.
+description: Ensures correct quoting and escaping syntax across shells (PowerShell, Bash, CMD). Handles nested command scenarios, cross-shell calls, and Windows-specific PowerShell patterns.
 allowed-tools:
   - Bash
   - Read
@@ -11,16 +11,16 @@ allowed-tools:
 
 # Quotefix
 
-This skill ensures commands are compatible with the user's shell environment by detecting the active shell and adjusting syntax for quoting, escaping, special characters (including German Umlauts), and permissions.
+This skill ensures commands are compatible with the user's shell environment by detecting the active shell and adjusting syntax for quoting and escaping.
 
 ## When to Use This Skill
 
 - Executing shell commands that may differ between PowerShell, Bash, CMD, and other shells
 - Working with file paths containing spaces or special characters
-- Handling German language characters (ä, ö, ü, ß) in filenames or content
-- Setting file permissions on Unix/Linux vs Windows systems
 - Writing cross-platform scripts
 - Dealing with environment variables and PATH configuration
+- Handling nested command scenarios (calling one shell from another)
+- Preventing quoting errors in complex command compositions
 
 ## Shell Detection Strategy
 
@@ -70,37 +70,29 @@ python -c "import platform; print(platform.system())"  # Linux, Windows, Darwin
 - Double quotes: Allow variable expansion: `"$HOME"` → `/home/user`
 - Escape special chars: `\"`, `\'`, `\\`, `\$`
 
-**German Characters:**
-- Ensure UTF-8 encoding: `export LANG=de_DE.UTF-8`
-- Filenames with Umlauts: `"Übersicht.txt"` (always quote)
-
-**Permissions:**
-```bash
-# Read permissions
-ls -la file.txt
-
-# Set permissions
-chmod 755 script.sh      # rwxr-xr-x
-chmod u+x script.sh      # Add execute for user
-chmod go-w file.txt      # Remove write for group and others
-
-# Change ownership
-chown user:group file.txt
-```
+**Escape Character:**
+- Backslash `\` is the escape character
+- Use `\$` for literal dollar sign
+- Use `\"` for literal quote inside double-quoted string
+- Use `\\` for literal backslash
 
 **Examples:**
 ```bash
-# File with spaces and Umlauts
-filename="Meine Übersicht.txt"
+# File with spaces
+filename="My Document.txt"
 touch "$filename"
 cat "$filename"
 
 # Escape special characters
 echo "Price: \$100"
-echo 'Price: $100'  # Literal
+echo 'Price: $100'  # Literal (no escaping needed in single quotes)
 
 # Command substitution
 current_date=$(date +%Y-%m-%d)
+
+# Escaping in different contexts
+echo "He said \"Hello\""
+echo 'He said "Hello"'  # Easier in single quotes
 ```
 
 ### PowerShell (Windows)
@@ -109,72 +101,174 @@ current_date=$(date +%Y-%m-%d)
 - Single quotes: Literal strings: `'$env:HOME'` → `$env:HOME`
 - Double quotes: Variable expansion: `"$env:HOME"` → `C:\Users\username`
 - Escape character: Backtick `` ` ``
-- Special chars: `` `n`` (newline), `` `t`` (tab), `` `$`` (literal $)
+- Special chars: `` `n`` (newline), `` `t`` (tab), `` `$`` (literal $), `` `"`` (literal quote)
 
-**German Characters:**
-- PowerShell uses UTF-16LE by default
-- Set encoding: `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8`
-- For files: `-Encoding UTF8` parameter
+**Escape Character:**
+- Backtick `` ` `` is the escape character (NOT backslash!)
+- Use `` `$ `` for literal dollar sign
+- Use `` `" `` for literal quote inside double-quoted string
+- Use `` `` `` for literal backtick
 
-**Permissions (ACLs):**
+**Here-Strings:**
+PowerShell supports here-strings for multi-line text without escaping:
+
 ```powershell
-# Read permissions
-Get-Acl file.txt | Format-List
+# Expandable here-string (with variable expansion)
+$message = @"
+User: $env:USERNAME
+Path: C:\Program Files\App
+Quote: "Hello World"
+"@
 
-# Set permissions
-$acl = Get-Acl file.txt
-$permission = "DOMAIN\User","FullControl","Allow"
-$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule $permission
-$acl.SetAccessRule($accessRule)
-Set-Acl file.txt $acl
+# Literal here-string (no variable expansion)
+$message = @'
+User: $env:USERNAME (literal, not expanded)
+Path: C:\Program Files\App
+Quote: "Hello World"
+'@
+```
 
-# Simple attribute changes
-Set-ItemProperty file.txt -Name IsReadOnly -Value $true
+**Stop-Parsing Token:**
+The `---%` token tells PowerShell to stop parsing and pass everything after it as-is:
+
+```powershell
+# Without ---%: PowerShell interprets quotes and special chars
+icacls C:\folder /grant Users:(OI)(CI)F  # May fail
+
+# With ---%: Everything passed literally to the executable
+icacls ---% C:\folder /grant Users:(OI)(CI)F
+
+# Useful for calling native commands with complex arguments
+curl ---% -X POST -H "Content-Type: application/json" -d '{"key":"value"}' http://api.example.com
+```
+
+**Common PowerShell Pitfalls:**
+
+1. **Function Call Syntax** - Don't use parentheses like C#:
+```powershell
+# WRONG - This is treated as passing an array
+Get-ChildItem("C:\", "*.txt")
+
+# CORRECT - Space-separated parameters
+Get-ChildItem "C:\" -Filter "*.txt"
+Get-ChildItem C:\ *.txt
+
+# WRONG - Parentheses group as single argument
+Copy-Item($source, $destination)
+
+# CORRECT - Space-separated
+Copy-Item $source $destination
+```
+
+2. **Comparison Operators** - PowerShell uses different operators:
+```powershell
+# WRONG - These don't work in PowerShell
+if ($x == 5)      # Syntax error
+if ($x != 10)     # Syntax error
+if ($x > 3)       # Wrong (redirects output!)
+
+# CORRECT - Use PowerShell comparison operators
+if ($x -eq 5)     # Equal
+if ($x -ne 10)    # Not equal
+if ($x -gt 3)     # Greater than
+if ($x -ge 3)     # Greater than or equal
+if ($x -lt 10)    # Less than
+if ($x -le 10)    # Less than or equal
+if ($x -like "test*")   # Wildcard matching
+if ($x -match "regex")  # Regex matching
+```
+
+3. **The $_ Variable in Pipelines:**
+```powershell
+# $_ represents the current object in the pipeline
+Get-ChildItem | Where-Object { $_.Length -gt 1MB }
+1..10 | ForEach-Object { $_ * 2 }
+Get-Process | Where-Object { $_.Name -like "chrome*" }
+
+# PITFALL: $_ only exists in pipeline contexts
+$x = $_  # This won't work outside a pipeline
+```
+
+4. **String Expansion:**
+```powershell
+# Variables expand in double quotes but not single quotes
+$name = "World"
+Write-Host "Hello $name"   # Outputs: Hello World
+Write-Host 'Hello $name'   # Outputs: Hello $name
+
+# Subexpression operator $() for complex expressions
+Write-Host "Current date: $(Get-Date -Format 'yyyy-MM-dd')"
+Write-Host "Files: $(Get-ChildItem | Measure-Object | Select-Object -ExpandProperty Count)"
 ```
 
 **Examples:**
 ```powershell
-# File with spaces and Umlauts
-$filename = "Meine Übersicht.txt"
+# File with spaces
+$filename = "My Document.txt"
 New-Item -Path $filename -ItemType File
 Get-Content $filename
 
 # Escape special characters
 Write-Host "Price: `$100"
-Write-Host 'Price: $100'  # Literal
+Write-Host 'Price: $100'  # Literal (no escaping needed)
 
 # Command substitution
 $currentDate = Get-Date -Format "yyyy-MM-dd"
 
-# Paths with spaces
+# Paths with spaces - always quote
 $path = "C:\Program Files\My App\data.txt"
-Test-Path "$path"  # Always quote paths
+Test-Path "$path"
+
+# Backtick for escaping
+Write-Host "Line 1`nLine 2`nLine 3"  # Newlines
+Write-Host "Column1`tColumn2`tColumn3"  # Tabs
+Write-Host "He said `"Hello`""  # Quotes
+
+# Using here-string for complex content
+$script = @"
+Write-Host "User: $env:USERNAME"
+Get-Content "C:\Program Files\file.txt"
+"@
+Invoke-Expression $script
 ```
+
+**PowerShell Documentation References:**
+- [about_Quoting_Rules](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_quoting_rules)
+- [about_Special_Characters](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_special_characters)
+- [PowerShell Escape Characters (SS64)](https://ss64.com/ps/syntax-esc.html)
 
 ### CMD (Windows Command Prompt)
 
 **Quoting:**
 - Double quotes for paths with spaces: `"C:\Program Files\app.exe"`
 - Escape character: Caret `^`
-- Special chars: `^&`, `^|`, `^<`, `^>`, `^^`
+- Special chars: `^&`, `^|`, `^<`, `^>`, `^^`, `^%`
 
-**German Characters:**
-- Use `chcp 65001` to set UTF-8 code page
-- Default is often Windows-1252 or CP850 (German)
+**Escape Character:**
+- Caret `^` is the escape character
+- Use `^&` to escape ampersand
+- Use `^^` for literal caret
+- Use `^%` to escape percent sign in batch files
 
 **Examples:**
 ```cmd
 REM File with spaces
-set filename="Meine Datei.txt"
+set filename="My Document.txt"
 type %filename%
 
 REM Escape special characters
-echo Price: ^$100
 echo 5 ^& 6
+echo Price: ^$100
+echo 100^%% complete
 
 REM Use variables
 set "PATH_TO_APP=C:\Program Files\MyApp"
 "%PATH_TO_APP%\app.exe"
+
+REM Multiline commands
+echo Line 1 ^
+& echo Line 2 ^
+& echo Line 3
 ```
 
 ### Fish Shell
@@ -182,17 +276,22 @@ set "PATH_TO_APP=C:\Program Files\MyApp"
 **Quoting:**
 - Single quotes: Literal
 - Double quotes: Variable expansion
-- No escape character in strings (use quotes)
+- No escape character in strings (use quotes instead)
 
 **Examples:**
 ```fish
 # File with spaces
-set filename "Meine Übersicht.txt"
+set filename "My Document.txt"
 touch $filename
 cat $filename
 
 # Variables
 set current_date (date +%Y-%m-%d)
+
+# No backslash escaping inside strings
+# Use different quote types instead
+echo "He said 'Hello'"
+echo 'He said "Hello"'
 ```
 
 ## Nested Quoting and Command Composition
@@ -207,16 +306,21 @@ When commands are nested (calling one shell from another, or embedding commands 
 
 ```cmd
 REM WRONG - Will fail with quotes
+powershell.exe -Command "Get-Content "file.txt""
+
+REM CORRECT - Use single quotes inside PowerShell command
 powershell.exe -Command "Get-Content 'file.txt'"
 
-REM CORRECT - Escape inner quotes
-powershell.exe -Command "Get-Content 'file.txt'"
-
-REM CORRECT - Use backslash for paths with spaces
+REM CORRECT - For paths with spaces
 powershell.exe -Command "Get-Content 'C:\Program Files\file.txt'"
 
 REM CORRECT - Complex nested example
 powershell.exe -Command "& {Get-ChildItem | Where-Object {$_.Name -like '*test*'}}"
+
+REM CORRECT - Using here-string approach
+powershell.exe -Command "$content = @'
+C:\Program Files\file.txt
+'@; Get-Content $content"
 ```
 
 ### PowerShell.exe Called from Bash/Zsh
@@ -233,8 +337,11 @@ powershell.exe -Command 'Get-Content "file.txt" | Where-Object {$_.Length -gt 10
 # CORRECT - Alternative with escaping
 powershell.exe -Command "Get-Content 'file.txt' | Where-Object {\$_.Length -gt 10}"
 
-# CORRECT - For paths with spaces, use double escaping
+# CORRECT - For paths with spaces
 powershell.exe -Command "Get-Content 'C:\Program Files\My App\file.txt'"
+
+# CORRECT - Complex nested with variable
+powershell.exe -Command 'Get-Process | Where-Object {$_.CPU -gt 100} | Select-Object Name, CPU'
 ```
 
 ### Bash/sh Called from PowerShell
@@ -248,8 +355,8 @@ bash -c "echo 'Hello World'"
 # CORRECT - Use single quotes in PowerShell, double inside bash
 bash -c 'echo "Hello World"'
 
-# CORRECT - Or escape quotes properly
-bash -c "echo \`"Hello World\`""
+# CORRECT - Or escape quotes properly with backtick
+bash -c "echo `"Hello World`""
 
 # CORRECT - Complex nested example
 bash -c 'grep "pattern" /path/to/file.txt | awk ''{print $1}'''
@@ -293,8 +400,13 @@ git commit -m $message
 
 **CMD - Escape quotes:**
 ```cmd
-REM CORRECT - Escape with backslash
-git commit -m "Add feature: User's \"profile\" page"
+REM CORRECT - Escape with caret (for special chars) or use simple quotes
+git commit -m "Add feature: User's profile page"
+
+REM For nested quotes, it's better to use a file
+echo Add feature: User's "profile" page > commit_msg.txt
+git commit -F commit_msg.txt
+del commit_msg.txt
 ```
 
 ### Docker Exec with Nested Commands
@@ -305,7 +417,7 @@ git commit -m "Add feature: User's \"profile\" page"
 # WRONG - Quotes not properly nested
 docker exec container bash -c "echo 'Hello World'"
 
-# CORRECT - Single quotes around the command
+# CORRECT - Single quotes around the bash command
 docker exec container bash -c 'echo "Hello World"'
 
 # CORRECT - Complex example with variables
@@ -322,6 +434,12 @@ docker exec container bash -c 'echo "Hello World"'
 
 # CORRECT - Complex nested
 docker exec container bash -c 'mysql -e "SELECT * FROM users WHERE name=''John''"'
+
+# CORRECT - Using here-string for very complex commands
+$dockerCmd = @'
+bash -c 'grep "error" /var/log/app.log | awk "{print $1}"'
+'@
+docker exec container $dockerCmd
 ```
 
 ### SSH Commands with Nested Quotes
@@ -379,12 +497,16 @@ $json = @'
 '@
 Invoke-RestMethod -Method Post -Body $json -Uri 'http://api.example.com'
 
-# CORRECT - Or use ConvertTo-Json
+# CORRECT - Or use ConvertTo-Json (BEST PRACTICE)
 $data = @{
     name = "value"
     path = "C:\Program Files\App"
 }
 $json = $data | ConvertTo-Json
+Invoke-RestMethod -Method Post -Body $json -Uri 'http://api.example.com'
+
+# CORRECT - Inline JSON with proper escaping
+$json = "{`"name`": `"value`", `"path`": `"C:\\Program Files\\App`"}"
 Invoke-RestMethod -Method Post -Body $json -Uri 'http://api.example.com'
 ```
 
@@ -443,6 +565,13 @@ docker exec container bash -c 'echo "nested command"'
 
 $script | Out-File script.ps1
 & .\script.ps1
+
+# CORRECT - Expandable here-string (with variables)
+$user = "O'Brien"
+$script = @"
+Write-Host "User's name: $user"
+Get-Content "file with spaces.txt"
+"@
 ```
 
 ### Quick Decision Tree for Nested Quoting
@@ -482,6 +611,10 @@ powershell.exe -Command "Get-Content "file.txt""
 powershell.exe -Command "Get-Process | Where {$_.Name -eq 'foo'}"
 # Should be: '\$_' or use single quotes
 
+# ❌ NEVER: Use parentheses for PowerShell function calls from other shells
+powershell.exe -Command "Get-ChildItem('C:\')"
+# Should be: Get-ChildItem C:\
+
 # ❌ NEVER: Use complex inline JSON
 curl -d "{\"key\":\"value with spaces\",\"nested\":{\"key2\":\"val\"}}"
 # Use heredoc or file instead
@@ -489,6 +622,10 @@ curl -d "{\"key\":\"value with spaces\",\"nested\":{\"key2\":\"val\"}}"
 # ❌ NEVER: Chain multiple levels without testing each level
 ssh host "docker exec c bash -c "mysql -e "SELECT * FROM t"""
 # Build up from innermost to outermost
+
+# ❌ NEVER: Use == in PowerShell conditions
+powershell.exe -Command "if ($x == 5) { Write-Host 'Five' }"
+# Should be: -eq instead of ==
 ```
 
 ### Best Practices for Avoiding Quoting Issues
@@ -500,6 +637,7 @@ ssh host "docker exec c bash -c "mysql -e "SELECT * FROM t"""
 5. **Escape $ and ` in bash when passing to other shells**
 6. **Use ConvertTo-Json in PowerShell** instead of manual JSON strings
 7. **Document the nesting levels** with comments when unavoidable
+8. **Remember PowerShell's unique syntax** (backtick, -eq vs ==, no parentheses for function calls)
 
 ## Cross-Platform Command Translation
 
@@ -515,15 +653,7 @@ ssh host "docker exec c bash -c "mysql -e "SELECT * FROM t"""
 | Environment var | `$HOME` | `$env:HOME` | `%USERPROFILE%` |
 | Path separator | `/` | `\` or `/` | `\` |
 | Line continuation | `\` | `` ` `` | `^` |
-
-### File Permissions
-
-| Platform | Command | Example |
-|----------|---------|---------|
-| Unix/Linux | `chmod` | `chmod 755 script.sh` |
-| macOS | `chmod` | `chmod +x app` |
-| Windows (PowerShell) | `Set-Acl` or `icacls` | `icacls file.txt /grant User:F` |
-| Windows (CMD) | `icacls` | `icacls file.txt /grant User:F` |
+| Escape character | `\` | `` ` `` | `^` |
 
 ## Implementation Guidelines
 
@@ -556,68 +686,6 @@ ssh host "docker exec c bash -c "mysql -e "SELECT * FROM t"""
    - Use proper quoting for the detected shell
    - Escape special characters correctly
    - Use correct path separators
-   - Apply proper permission commands
-
-### Handling German Language Specifics
-
-**File Names with Umlauts:**
-```bash
-# Bash - always quote
-filename="Größe_Übersicht.txt"
-touch "$filename"
-
-# PowerShell
-$filename = "Größe_Übersicht.txt"
-New-Item -Path $filename -ItemType File
-
-# Ensure UTF-8
-export LC_ALL=de_DE.UTF-8  # Bash
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8  # PowerShell
-```
-
-**String Content:**
-```bash
-# Bash
-echo "Größe: 10 cm"
-printf "Preis: %.2f €\n" 19.99
-
-# PowerShell
-Write-Host "Größe: 10 cm"
-"{0:C2}" -f 19.99  # Currency formatting
-```
-
-### Permission Handling Template
-
-```bash
-# Detect platform and set permissions
-set_permissions() {
-    local file=$1
-    local mode=$2
-
-    if command -v chmod &> /dev/null; then
-        # Unix/Linux/macOS
-        chmod "$mode" "$file"
-        echo "Set permissions to $mode on $file"
-    elif command -v icacls &> /dev/null; then
-        # Windows
-        case "$mode" in
-            755|rwxr-xr-x)
-                icacls "$file" /grant:r "%USERNAME%:F" /grant:r "Users:RX"
-                ;;
-            644|rw-r--r--)
-                icacls "$file" /grant:r "%USERNAME%:W" /grant:r "Users:R"
-                ;;
-        esac
-        echo "Set Windows ACL on $file"
-    else
-        echo "Unable to set permissions - unknown platform"
-        return 1
-    fi
-}
-
-# Usage
-set_permissions "script.sh" "755"
-```
 
 ## Complete Example: Cross-Platform Script
 
@@ -649,32 +717,19 @@ detect_environment() {
     echo "Detected: $SHELL_TYPE on $PLATFORM"
 }
 
-# Set encoding for German characters
-set_encoding() {
-    if [ "$PLATFORM" = "windows" ]; then
-        # Windows UTF-8
-        chcp 65001 2>/dev/null || true
-    else
-        # Unix/Linux/Mac UTF-8
-        export LANG=de_DE.UTF-8
-        export LC_ALL=de_DE.UTF-8
-    fi
-}
-
 # Create file with proper quoting
 create_file() {
-    local filename="Projekt_Übersicht.txt"
+    local filename="My Document.txt"
 
     if [ "$SHELL_TYPE" = "bash" ] || [ "$SHELL_TYPE" = "zsh" ]; then
         # Bash/Zsh quoting
         touch "$filename"
-        echo "Größe: 100 MB" > "$filename"
+        echo "Size: 100 MB" > "$filename"
     fi
 }
 
 # Main execution
 detect_environment
-set_encoding
 create_file
 ```
 
@@ -684,28 +739,33 @@ create_file
 - **Bash/Zsh**: Use `"$var"` for expansion, `'literal'` for literal
 - **PowerShell**: Use `"$var"` for expansion, `'literal'` for literal
 - **CMD**: Use `%var%` for variables, `"path with spaces"`
+- **Fish**: Use `"$var"` for expansion, `'literal'` for literal
 
 ### Escape Characters
 - **Bash/Zsh**: `\` (backslash)
-- **PowerShell**: `` ` `` (backtick)
+- **PowerShell**: `` ` `` (backtick) - NOT backslash!
 - **CMD**: `^` (caret)
+- **Fish**: No escape character (use different quote types)
 
 ### Path Separators
 - **Unix/Linux/macOS**: `/`
 - **Windows**: `\` (but PowerShell accepts both `/` and `\`)
 
-### Encoding for German
-- **Bash**: `export LANG=de_DE.UTF-8`
-- **PowerShell**: `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8`
-- **CMD**: `chcp 65001`
+### Special PowerShell Operators
+- **Comparison**: `-eq`, `-ne`, `-gt`, `-ge`, `-lt`, `-le`, `-like`, `-match`
+- **Pipeline variable**: `$_` (current object)
+- **Stop-parsing**: `---%` (pass arguments literally)
+- **Subexpression**: `$(...)` (embed expressions in strings)
 
 ## Best Practices
 
 1. **Always detect before executing** - Never assume the shell type
 2. **Quote all variables** - Prevents word splitting and globbing
-3. **Use UTF-8 encoding** - Essential for German characters
-4. **Test on target platform** - Cross-platform issues are common
-5. **Provide fallbacks** - Handle unknown shells gracefully
-6. **Document shell requirements** - Make dependencies clear
-7. **Avoid shell-specific features** - When portability is needed
-8. **Check command availability** - Use `command -v` before execution
+3. **Test on target platform** - Cross-platform issues are common
+4. **Provide fallbacks** - Handle unknown shells gracefully
+5. **Document shell requirements** - Make dependencies clear
+6. **Avoid shell-specific features** - When portability is needed
+7. **Check command availability** - Use `command -v` before execution
+8. **Remember PowerShell is different** - Backtick escaping, -eq operators, no function parentheses
+9. **Use here-strings/heredocs for complex content** - Avoid escaping hell
+10. **Build nested commands incrementally** - Test each level before combining
