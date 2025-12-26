@@ -1,4 +1,4 @@
-# Shell Environment Detector Skill
+# Quotefix Skill
 
 A Claude Code skill that automatically detects shell environments (PowerShell, Bash, Zsh, Fish, CMD) and adjusts command syntax for quoting, escape symbols, German language characters, and file permissions.
 
@@ -16,7 +16,7 @@ A Claude Code skill that automatically detects shell environments (PowerShell, B
 
 This skill is already installed in your project at:
 ```
-.claude/skills/shell-environment-detector/
+.claude/skills/quotefix/
 ```
 
 Claude Code will automatically detect and use this skill when relevant.
@@ -33,7 +33,7 @@ The skill will be used automatically when:
 ## File Structure
 
 ```
-shell-environment-detector/
+quotefix/
 ├── SKILL.md      # Main skill definition with detection logic
 ├── examples.md   # Practical examples and use cases
 └── README.md     # This file
@@ -143,7 +143,7 @@ Create a test script to verify the skill works:
 # test_skill.sh
 #!/usr/bin/env bash
 
-echo "Testing Shell Environment Detector..."
+echo "Testing Quotefix..."
 
 # Test 1: Shell detection
 if [ -n "$BASH_VERSION" ]; then

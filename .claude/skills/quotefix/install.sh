@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ##############################################################################
-# Shell Environment Detector Skill - Global Installer
+# Quotefix Skill - Global Installer
 #
 # Installs the skill globally to ~/.claude/skills/ so it's available
 # in ALL Claude Code sessions across all projects.
@@ -21,7 +21,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Skill name
-SKILL_NAME="shell-environment-detector"
+SKILL_NAME="quotefix"
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -48,7 +48,7 @@ print_error() {
 
 # Function to install the skill
 install_skill() {
-    print_info "Installing Shell Environment Detector skill globally..."
+    print_info "Installing Quotefix skill globally..."
     echo ""
 
     # Create the global skills directory if it doesn't exist
@@ -96,7 +96,7 @@ install_skill() {
 
 # Function to uninstall the skill
 uninstall_skill() {
-    print_info "Uninstalling Shell Environment Detector skill..."
+    print_info "Uninstalling Quotefix skill..."
     echo ""
 
     if [ ! -d "$TARGET_DIR" ]; then

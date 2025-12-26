@@ -1,5 +1,5 @@
 ---
-name: shell-environment-detector
+name: quotefix
 description: Detects the current shell environment (PowerShell, Bash, Zsh, Fish, CMD, etc.) and automatically adjusts command syntax for quoting, escape symbols, German language characters (Umlauts), and file permissions. Use when executing shell commands to ensure compatibility across different operating systems and shell environments.
 allowed-tools:
   - Bash
@@ -9,7 +9,7 @@ allowed-tools:
   - Edit
 ---
 
-# Shell Environment Detector
+# Quotefix
 
 This skill ensures commands are compatible with the user's shell environment by detecting the active shell and adjusting syntax for quoting, escaping, special characters (including German Umlauts), and permissions.
 

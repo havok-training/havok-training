@@ -1,6 +1,6 @@
-# Installation Guide - Shell Environment Detector Skill
+# Installation Guide - Quotefix Skill
 
-This guide will help you install the **Shell Environment Detector** skill globally so it's available in **all** your Claude Code environments.
+This guide will help you install the **Quotefix** skill globally so it's available in **all** your Claude Code environments.
 
 ## 📍 What is Global Installation?
 
@@ -19,7 +19,7 @@ This installer creates a **personal skill** that works everywhere!
 
 ```bash
 # Navigate to the skill directory
-cd .claude/skills/shell-environment-detector
+cd .claude/skills/quotefix
 
 # Make the installer executable
 chmod +x install.sh
@@ -32,7 +32,7 @@ chmod +x install.sh
 
 ```powershell
 # Navigate to the skill directory
-cd .claude\skills\shell-environment-detector
+cd .claude\skills\quotefix
 
 # Run the installer
 .\install.ps1
@@ -42,7 +42,7 @@ cd .claude\skills\shell-environment-detector
 
 ```bash
 # Navigate to the skill directory
-cd .claude/skills/shell-environment-detector
+cd .claude/skills/quotefix
 
 # Run the installer
 bash install.sh
@@ -56,7 +56,7 @@ After installation, the skill will be located at:
 
 **Linux / macOS / WSL:**
 ```
-~/.claude/skills/shell-environment-detector/
+~/.claude/skills/quotefix/
 ├── SKILL.md
 ├── examples.md
 └── README.md
@@ -64,7 +64,7 @@ After installation, the skill will be located at:
 
 **Windows:**
 ```
-C:\Users\YourUsername\.claude\skills\shell-environment-detector\
+C:\Users\YourUsername\.claude\skills\quotefix\
 ├── SKILL.md
 ├── examples.md
 └── README.md
@@ -80,7 +80,7 @@ If you use both **Windows** and **WSL**, install the skill in **both** environme
 
 ```powershell
 # In PowerShell
-cd C:\path\to\havok-training\.claude\skills\shell-environment-detector
+cd C:\path\to\havok-training\.claude\skills\quotefix
 .\install.ps1
 ```
 
@@ -88,7 +88,7 @@ cd C:\path\to\havok-training\.claude\skills\shell-environment-detector
 
 ```bash
 # In WSL
-cd /path/to/havok-training/.claude/skills/shell-environment-detector
+cd /path/to/havok-training/.claude/skills/quotefix
 ./install.sh
 ```
 
@@ -108,7 +108,7 @@ On each machine:
 ```bash
 # Clone the repo
 git clone https://github.com/havok-training/havok-training.git
-cd havok-training/.claude/skills/shell-environment-detector
+cd havok-training/.claude/skills/quotefix
 
 # Run the installer
 ./install.sh          # Linux/macOS/WSL
@@ -119,17 +119,17 @@ cd havok-training/.claude/skills/shell-environment-detector
 ### Method 2: Direct Download (No Git)
 
 1. **Download the skill files:**
-   - Go to: https://github.com/havok-training/havok-training/tree/claude/detect-shell-environment-G4vQY/.claude/skills/shell-environment-detector
+   - Go to: https://github.com/havok-training/havok-training/tree/claude/detect-shell-environment-G4vQY/.claude/skills/quotefix
    - Download: `SKILL.md`, `examples.md`, `README.md`, `install.sh`, `install.ps1`
 
 2. **Create the directory:**
    ```bash
-   mkdir -p ~/.claude/skills/shell-environment-detector
+   mkdir -p ~/.claude/skills/quotefix
    ```
 
 3. **Copy files:**
    ```bash
-   cp SKILL.md examples.md README.md ~/.claude/skills/shell-environment-detector/
+   cp SKILL.md examples.md README.md ~/.claude/skills/quotefix/
    ```
 
 ### Method 3: Manual Installation Script
@@ -139,24 +139,24 @@ Create and run this on any machine:
 **Bash version:**
 ```bash
 #!/bin/bash
-mkdir -p ~/.claude/skills/shell-environment-detector
-cd ~/.claude/skills/shell-environment-detector
+mkdir -p ~/.claude/skills/quotefix
+cd ~/.claude/skills/quotefix
 
 # Download files directly from GitHub
-curl -O https://raw.githubusercontent.com/havok-training/havok-training/claude/detect-shell-environment-G4vQY/.claude/skills/shell-environment-detector/SKILL.md
-curl -O https://raw.githubusercontent.com/havok-training/havok-training/claude/detect-shell-environment-G4vQY/.claude/skills/shell-environment-detector/examples.md
-curl -O https://raw.githubusercontent.com/havok-training/havok-training/claude/detect-shell-environment-G4vQY/.claude/skills/shell-environment-detector/README.md
+curl -O https://raw.githubusercontent.com/havok-training/havok-training/claude/detect-shell-environment-G4vQY/.claude/skills/quotefix/SKILL.md
+curl -O https://raw.githubusercontent.com/havok-training/havok-training/claude/detect-shell-environment-G4vQY/.claude/skills/quotefix/examples.md
+curl -O https://raw.githubusercontent.com/havok-training/havok-training/claude/detect-shell-environment-G4vQY/.claude/skills/quotefix/README.md
 
 echo "Installation complete!"
 ```
 
 **PowerShell version:**
 ```powershell
-$SkillDir = "$env:USERPROFILE\.claude\skills\shell-environment-detector"
+$SkillDir = "$env:USERPROFILE\.claude\skills\quotefix"
 New-Item -Path $SkillDir -ItemType Directory -Force
 Set-Location $SkillDir
 
-$BaseUrl = "https://raw.githubusercontent.com/havok-training/havok-training/claude/detect-shell-environment-G4vQY/.claude/skills/shell-environment-detector"
+$BaseUrl = "https://raw.githubusercontent.com/havok-training/havok-training/claude/detect-shell-environment-G4vQY/.claude/skills/quotefix"
 
 Invoke-WebRequest -Uri "$BaseUrl/SKILL.md" -OutFile "SKILL.md"
 Invoke-WebRequest -Uri "$BaseUrl/examples.md" -OutFile "examples.md"
@@ -173,12 +173,12 @@ Check if the skill is installed correctly:
 
 **Linux / macOS / WSL:**
 ```bash
-ls -la ~/.claude/skills/shell-environment-detector/
+ls -la ~/.claude/skills/quotefix/
 ```
 
 **Windows PowerShell:**
 ```powershell
-Get-ChildItem ~\.claude\skills\shell-environment-detector\
+Get-ChildItem ~\.claude\skills\quotefix\
 ```
 
 You should see:
@@ -223,14 +223,14 @@ If you want to remove the global installation:
 ```bash
 ./install.sh --uninstall
 # OR manually:
-rm -rf ~/.claude/skills/shell-environment-detector
+rm -rf ~/.claude/skills/quotefix
 ```
 
 **Windows PowerShell:**
 ```powershell
 .\install.ps1 -Uninstall
 # OR manually:
-Remove-Item ~\.claude\skills\shell-environment-detector -Recurse
+Remove-Item ~\.claude\skills\quotefix -Recurse
 ```
 
 ---
@@ -244,19 +244,19 @@ Remove-Item ~\.claude\skills\shell-environment-detector -Recurse
 **Solutions:**
 1. **Verify installation location:**
    ```bash
-   ls -la ~/.claude/skills/shell-environment-detector/SKILL.md
+   ls -la ~/.claude/skills/quotefix/SKILL.md
    ```
 
 2. **Check file permissions:**
    ```bash
-   chmod 644 ~/.claude/skills/shell-environment-detector/*.md
+   chmod 644 ~/.claude/skills/quotefix/*.md
    ```
 
 3. **Restart Claude Code** - Skills are loaded at startup
 
 4. **Check skill metadata:**
    ```bash
-   head -20 ~/.claude/skills/shell-environment-detector/SKILL.md
+   head -20 ~/.claude/skills/quotefix/SKILL.md
    ```
    Ensure the YAML frontmatter is intact.
 
@@ -267,7 +267,7 @@ Remove-Item ~\.claude\skills\shell-environment-detector -Recurse
 **Solution:**
 Ensure files are saved with UTF-8 encoding:
 ```bash
-file ~/.claude/skills/shell-environment-detector/SKILL.md
+file ~/.claude/skills/quotefix/SKILL.md
 # Should output: UTF-8 Unicode text
 ```
 
@@ -311,7 +311,7 @@ To update the skill:
 git pull
 
 # Re-run installer
-cd .claude/skills/shell-environment-detector
+cd .claude/skills/quotefix
 ./install.sh
 ```
 
@@ -321,7 +321,7 @@ Share the installer with your team:
 ```bash
 # They can clone and install
 git clone https://github.com/havok-training/havok-training.git
-cd havok-training/.claude/skills/shell-environment-detector
+cd havok-training/.claude/skills/quotefix
 ./install.sh
 ```
 

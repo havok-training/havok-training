@@ -1,6 +1,6 @@
-# Shell Environment Detector - Examples
+# Quotefix - Examples
 
-This file contains practical examples for using the shell environment detector skill.
+This file contains practical examples for using the quotefix skill.
 
 ## Example 1: Simple Shell Detection and Adaptation
 
@@ -853,4 +853,4 @@ ssh host 'bash ./script.sh'
 ssh host 'docker exec c bash -c "mysql -e \"SELECT * FROM t\""'
 ```
 
-These examples demonstrate the key concepts from the shell environment detector skill in practical scenarios.
+These examples demonstrate the key concepts from the quotefix skill in practical scenarios.

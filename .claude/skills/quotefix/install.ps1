@@ -1,5 +1,5 @@
 ##############################################################################
-# Shell Environment Detector Skill - Global Installer (PowerShell)
+# Quotefix Skill - Global Installer (PowerShell)
 #
 # Installs the skill globally to ~/.claude/skills/ so it's available
 # in ALL Claude Code sessions across all projects.
@@ -15,7 +15,7 @@ param(
 )
 
 # Skill name
-$SkillName = "shell-environment-detector"
+$SkillName = "quotefix"
 
 # Get the directory where this script is located
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -46,7 +46,7 @@ function Write-Error {
 
 # Function to install the skill
 function Install-Skill {
-    Write-Info "Installing Shell Environment Detector skill globally..."
+    Write-Info "Installing Quotefix skill globally..."
     Write-Host ""
 
     # Create the global skills directory if it doesn't exist
@@ -102,7 +102,7 @@ function Install-Skill {
 
 # Function to uninstall the skill
 function Uninstall-Skill {
-    Write-Info "Uninstalling Shell Environment Detector skill..."
+    Write-Info "Uninstalling Quotefix skill..."
     Write-Host ""
 
     if (-not (Test-Path $TargetDir)) {
