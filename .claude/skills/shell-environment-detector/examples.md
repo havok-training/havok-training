@@ -484,4 +484,373 @@ for file in "${files[@]}"; do
 done
 ```
 
+## Example 7: Nested Quoting - The Most Common Pain Point
+
+**Scenario:** Complex nested command scenarios that cause repeated iterations and failures.
+
+### PowerShell from Bash (Git Bash on Windows)
+
+```bash
+#!/usr/bin/env bash
+# Running on Git Bash, calling PowerShell
+
+# ❌ WRONG - Bash interprets $_ before PowerShell sees it
+powershell.exe -Command "Get-Process | Where-Object {$_.Name -eq 'chrome'}"
+
+# ✅ CORRECT - Use single quotes to protect from Bash
+powershell.exe -Command 'Get-Process | Where-Object {$_.Name -eq "chrome"}'
+
+# ✅ CORRECT - Alternative: escape the dollar sign
+powershell.exe -Command "Get-Process | Where-Object {\$_.Name -eq 'chrome'}"
+
+# ✅ CORRECT - Complex example with paths
+powershell.exe -Command 'Get-Content "C:\Program Files\My App\config.txt" | Select-String "pattern"'
+```
+
+### Bash from PowerShell
+
+```powershell
+# Running in PowerShell, calling Bash (WSL or Git Bash)
+
+# ❌ WRONG - PowerShell escaping incorrect
+bash -c "echo 'Hello World'"
+
+# ✅ CORRECT - Use single quotes in PowerShell
+bash -c 'echo "Hello World"'
+
+# ✅ CORRECT - Or use backtick escaping
+bash -c "echo \`"Hello World\`""
+
+# ✅ CORRECT - Complex example with grep and awk
+bash -c 'grep "error" /var/log/app.log | awk ''{print $1}'''
+
+# ✅ BEST - Use here-string for complex commands
+$bashCmd = @'
+grep "error" /var/log/app.log | awk '{print $1}' | sort | uniq
+'@
+bash -c $bashCmd
+```
+
+### Git Commit with Complex Messages
+
+```bash
+#!/usr/bin/env bash
+
+# ❌ WRONG - Quotes break the commit message
+git commit -m "Fix user's "profile" page bug"
+
+# ❌ WRONG - Escaping becomes messy
+git commit -m "Fix user's \"profile\" page bug with O'Brien's account"
+
+# ✅ BEST PRACTICE - Use heredoc
+git commit -m "$(cat <<'EOF'
+Fix user's "profile" page bug
+
+- Resolved issue with O'Brien's account
+- Updated "Edit Profile" functionality
+- Added validation for names with apostrophes (e.g., O'Sullivan)
+EOF
+)"
+```
+
+**PowerShell version:**
+```powershell
+# ✅ BEST PRACTICE - Use here-string
+$commitMessage = @"
+Fix user's "profile" page bug
+
+- Resolved issue with O'Brien's account
+- Updated "Edit Profile" functionality
+- Added validation for names with apostrophes (e.g., O'Sullivan)
+"@
+
+git commit -m $commitMessage
+```
+
+### Docker Exec Nested Commands
+
+```bash
+#!/usr/bin/env bash
+
+# ❌ WRONG - Quote nesting broken
+docker exec mycontainer bash -c "mysql -e "SELECT * FROM users""
+
+# ✅ CORRECT - Alternate quotes at each level
+docker exec mycontainer bash -c 'mysql -e "SELECT * FROM users WHERE name=\"John\""'
+
+# ✅ CORRECT - Complex example with grep
+docker exec mycontainer bash -c 'grep "ERROR" /var/log/app.log | tail -n 20'
+
+# ✅ CORRECT - With file paths containing spaces
+docker exec mycontainer bash -c 'cat "/app/My Files/Größenübersicht.txt"'
+
+# ✅ BEST - For very complex cases, use heredoc
+docker exec mycontainer bash -c "$(cat <<'EOF'
+cd /app
+mysql -e "SELECT * FROM users WHERE name='O\"Brien'"
+grep "error" "log files/app.log"
+EOF
+)"
+```
+
+**From PowerShell:**
+```powershell
+# ✅ CORRECT - Use single quotes in PowerShell for bash commands
+docker exec mycontainer bash -c 'mysql -e "SELECT * FROM users"'
+
+# ✅ CORRECT - Double single quotes for literal single quotes in SQL
+docker exec mycontainer bash -c 'mysql -e "SELECT * FROM users WHERE name=''John''"'
+```
+
+### SSH with Nested Commands
+
+```bash
+#!/usr/bin/env bash
+
+# ❌ WRONG - Quotes interpreted locally instead of remotely
+ssh user@remote "grep 'error' /var/log/syslog"
+
+# ✅ CORRECT - Use single quotes to preserve for remote execution
+ssh user@remote 'grep "error" /var/log/syslog'
+
+# ✅ CORRECT - Multiple nested levels (SSH -> Docker -> Bash)
+ssh user@remote 'docker exec container bash -c "grep \"error\" /var/log/app.log"'
+
+# ✅ CORRECT - With local variable expansion
+LOG_PATTERN="error"
+ssh user@remote "grep '$LOG_PATTERN' /var/log/syslog"
+
+# ✅ BEST - Very complex: use intermediate script
+cat > /tmp/remote_script.sh << 'EOF'
+#!/bin/bash
+docker exec mycontainer bash -c 'mysql -e "SELECT * FROM users WHERE name=\"admin\""'
+EOF
+
+scp /tmp/remote_script.sh user@remote:/tmp/
+ssh user@remote 'bash /tmp/remote_script.sh'
+```
+
+### JSON in API Calls
+
+```bash
+#!/usr/bin/env bash
+
+# ❌ WRONG - Unescaped JSON breaks
+curl -X POST -d {"name": "John", "role": "admin"} http://api.example.com
+
+# ❌ WRONG - Escaping becomes nightmare
+curl -X POST -d "{\"name\": \"John\", \"role\": \"admin\"}" http://api.example.com
+
+# ✅ CORRECT - Use single quotes for JSON
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"name": "John", "role": "admin"}' \
+  http://api.example.com
+
+# ✅ CORRECT - Complex nested JSON
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"user": {"name": "John", "meta": {"role": "admin"}}}' \
+  http://api.example.com
+
+# ✅ BEST - Use heredoc for complex JSON
+JSON_DATA=$(cat <<'EOF'
+{
+  "user": {
+    "name": "O'Brien",
+    "path": "/home/user/My Files",
+    "metadata": {
+      "role": "admin",
+      "status": "active"
+    }
+  }
+}
+EOF
+)
+
+curl -X POST -H "Content-Type: application/json" \
+  -d "$JSON_DATA" \
+  http://api.example.com
+```
+
+**PowerShell version:**
+```powershell
+# ✅ BEST - Use here-string for JSON
+$jsonData = @'
+{
+  "user": {
+    "name": "O'Brien",
+    "path": "C:\\Users\\user\\My Files",
+    "metadata": {
+      "role": "admin",
+      "status": "active"
+    }
+  }
+}
+'@
+
+Invoke-RestMethod -Method Post -Uri 'http://api.example.com' `
+  -Body $jsonData -ContentType 'application/json'
+
+# ✅ EVEN BETTER - Use PowerShell objects
+$data = @{
+  user = @{
+    name = "O'Brien"
+    path = "C:\Users\user\My Files"
+    metadata = @{
+      role = "admin"
+      status = "active"
+    }
+  }
+}
+
+$jsonData = $data | ConvertTo-Json -Depth 10
+Invoke-RestMethod -Method Post -Uri 'http://api.example.com' `
+  -Body $jsonData -ContentType 'application/json'
+```
+
+### Multiple Nesting Levels - Real World Example
+
+**Scenario:** Deploy via SSH to a remote host that runs Docker containers with MySQL inside.
+
+```bash
+#!/usr/bin/env bash
+
+# ❌ WRONG - Total quote chaos
+ssh deploy@prod "docker exec mysql bash -c "mysql -e "CREATE DATABASE app"""
+
+# ✅ WORKS - But hard to read
+ssh deploy@prod 'docker exec mysql bash -c "mysql -e \"CREATE DATABASE app\""'
+
+# ✅ BEST PRACTICE - Use intermediate script
+cat > /tmp/deploy.sh << 'EOF'
+#!/bin/bash
+# This runs on the remote host
+
+docker exec mysql bash -c 'mysql -e "CREATE DATABASE app"'
+docker exec mysql bash -c 'mysql app -e "CREATE TABLE users (id INT, name VARCHAR(100))"'
+docker exec mysql bash -c 'mysql app -e "INSERT INTO users VALUES (1, \"O'"'"'Brien\")"'
+
+echo "Database setup complete"
+EOF
+
+# Copy script to remote host
+scp /tmp/deploy.sh deploy@prod:/tmp/
+
+# Execute remotely
+ssh deploy@prod 'bash /tmp/deploy.sh'
+
+# Cleanup
+ssh deploy@prod 'rm /tmp/deploy.sh'
+```
+
+**PowerShell version:**
+```powershell
+# ✅ BEST PRACTICE - Use here-string for complex script
+$deployScript = @'
+#!/bin/bash
+docker exec mysql bash -c 'mysql -e "CREATE DATABASE app"'
+docker exec mysql bash -c 'mysql app -e "CREATE TABLE users (id INT, name VARCHAR(100))"'
+docker exec mysql bash -c 'mysql app -e "INSERT INTO users VALUES (1, \"O'Brien\")"'
+echo "Database setup complete"
+'@
+
+# Save locally
+$deployScript | Out-File -FilePath /tmp/deploy.sh -Encoding UTF8
+
+# Copy to remote (using scp or pscp)
+scp /tmp/deploy.sh deploy@prod:/tmp/
+
+# Execute remotely
+ssh deploy@prod 'bash /tmp/deploy.sh'
+
+# Cleanup
+ssh deploy@prod 'rm /tmp/deploy.sh'
+```
+
+### Decision Tree for Nested Quoting
+
+```bash
+#!/usr/bin/env bash
+
+# Level 0: Simple command (no nesting)
+echo "Hello World"
+
+# Level 1: One level of nesting - Use opposite quotes
+bash -c 'echo "Hello World"'
+powershell.exe -Command 'Write-Host "Hello World"'
+
+# Level 2: Two levels of nesting - Alternate and escape
+ssh user@host 'bash -c "echo \"Hello World\""'
+ssh user@host 'docker exec container bash -c "echo \"Hello\""'
+
+# Level 3+: Multiple levels - Use heredoc/scripts
+cat > /tmp/script.sh << 'EOF'
+docker exec container bash -c 'mysql -e "SELECT * FROM users WHERE name=\"admin\""'
+EOF
+ssh user@host 'bash /tmp/script.sh'
+```
+
+### Anti-Pattern Examples (What NOT to Do)
+
+```bash
+#!/usr/bin/env bash
+
+# ❌ ANTI-PATTERN 1: Same quotes at multiple levels
+powershell.exe -Command "Get-Content "file.txt""  # BROKEN
+
+# ❌ ANTI-PATTERN 2: Forgetting to escape $ in Bash
+powershell.exe -Command "Get-Process | Where {$_.Name -eq 'foo'}"  # Bash expands $_
+
+# ❌ ANTI-PATTERN 3: Complex inline JSON
+curl -d "{\"user\":{\"name\":\"O'Brien\",\"path\":\"C:\\\\Files\"}}" api  # NIGHTMARE
+
+# ❌ ANTI-PATTERN 4: Excessive escaping
+echo "He said: \"She's from the \\\"Big Apple\\\"\"" # HARD TO READ
+
+# ❌ ANTI-PATTERN 5: Not testing each nesting level separately
+ssh host "docker exec c bash -c "mysql -e "SELECT * FROM t"""  # IMPOSSIBLE TO DEBUG
+```
+
+### Best Practice Summary
+
+```bash
+#!/usr/bin/env bash
+
+# ✅ Rule 1: Use heredoc for 3+ lines or 2+ nesting levels
+COMPLEX_CMD=$(cat <<'EOF'
+Multi-line command with "quotes" and 'apostrophes'
+Can include anything without escaping
+Perfect for JSON, SQL, or complex scripts
+EOF
+)
+
+# ✅ Rule 2: Alternate quote types at each nesting level
+# Outer: single, Inner: double (or vice versa)
+docker exec c bash -c 'echo "Hello"'
+
+# ✅ Rule 3: Test each level separately before combining
+# Test innermost first:
+echo "Hello"
+# Then wrap in bash -c:
+bash -c 'echo "Hello"'
+# Then wrap in docker exec:
+docker exec c bash -c 'echo "Hello"'
+# Finally wrap in ssh:
+ssh user@host 'docker exec c bash -c "echo \"Hello\""'
+
+# ✅ Rule 4: Use intermediate scripts for very complex cases
+# Instead of: ssh host "docker exec c bash -c \"complex command\""
+# Do this:
+cat > script.sh << 'EOF'
+docker exec c bash -c 'complex command'
+EOF
+ssh host 'bash ./script.sh'
+
+# ✅ Rule 5: Document nesting levels with comments
+# Level 1: SSH to remote host
+# Level 2: Docker exec into container
+# Level 3: Bash command inside container
+# Level 4: MySQL query with quotes
+ssh host 'docker exec c bash -c "mysql -e \"SELECT * FROM t\""'
+```
+
 These examples demonstrate the key concepts from the shell environment detector skill in practical scenarios.

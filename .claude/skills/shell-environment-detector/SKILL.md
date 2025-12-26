@@ -195,6 +195,312 @@ cat $filename
 set current_date (date +%Y-%m-%d)
 ```
 
+## Nested Quoting and Command Composition
+
+**This is the most common source of errors and repeated iterations!**
+
+When commands are nested (calling one shell from another, or embedding commands within commands), quoting becomes exponentially complex. Here are the patterns that work:
+
+### PowerShell.exe Called from CMD
+
+**Problem:** Running PowerShell commands from CMD requires careful escaping.
+
+```cmd
+REM WRONG - Will fail with quotes
+powershell.exe -Command "Get-Content 'file.txt'"
+
+REM CORRECT - Escape inner quotes
+powershell.exe -Command "Get-Content 'file.txt'"
+
+REM CORRECT - Use backslash for paths with spaces
+powershell.exe -Command "Get-Content 'C:\Program Files\file.txt'"
+
+REM CORRECT - Complex nested example
+powershell.exe -Command "& {Get-ChildItem | Where-Object {$_.Name -like '*test*'}}"
+```
+
+### PowerShell.exe Called from Bash/Zsh
+
+**Problem:** Bash interprets quotes and variables before passing to PowerShell.
+
+```bash
+# WRONG - Bash interprets $_ and quotes
+powershell.exe -Command "Get-Content 'file.txt' | Where-Object {$_.Length -gt 10}"
+
+# CORRECT - Escape or use single quotes to protect from Bash
+powershell.exe -Command 'Get-Content "file.txt" | Where-Object {$_.Length -gt 10}'
+
+# CORRECT - Alternative with escaping
+powershell.exe -Command "Get-Content 'file.txt' | Where-Object {\$_.Length -gt 10}"
+
+# CORRECT - For paths with spaces, use double escaping
+powershell.exe -Command "Get-Content 'C:\Program Files\My App\file.txt'"
+```
+
+### Bash/sh Called from PowerShell
+
+**Problem:** PowerShell's quoting and escaping rules differ from Bash.
+
+```powershell
+# WRONG - PowerShell interprets the quotes incorrectly
+bash -c "echo 'Hello World'"
+
+# CORRECT - Use single quotes in PowerShell, double inside bash
+bash -c 'echo "Hello World"'
+
+# CORRECT - Or escape quotes properly
+bash -c "echo \`"Hello World\`""
+
+# CORRECT - Complex nested example
+bash -c 'grep "pattern" /path/to/file.txt | awk ''{print $1}'''
+
+# CORRECT - Even better, use here-string
+$command = @'
+grep "pattern" /path/to/file.txt | awk '{print $1}'
+'@
+bash -c $command
+```
+
+### Git Commit Messages with Quotes
+
+**Problem:** Commit messages often contain quotes and need proper escaping.
+
+**Bash - Use HEREDOC (BEST PRACTICE):**
+```bash
+# CORRECT - Heredoc avoids all quoting issues
+git commit -m "$(cat <<'EOF'
+Add feature: User's "profile" page
+
+- Implemented user's profile view
+- Added "Edit Profile" button
+- Fixed issue with apostrophes in names like O'Brien
+EOF
+)"
+```
+
+**PowerShell - Use here-string:**
+```powershell
+# CORRECT - Here-string
+$message = @"
+Add feature: User's "profile" page
+
+- Implemented user's profile view
+- Added "Edit Profile" button
+- Fixed issue with apostrophes in names like O'Brien
+"@
+git commit -m $message
+```
+
+**CMD - Escape quotes:**
+```cmd
+REM CORRECT - Escape with backslash
+git commit -m "Add feature: User's \"profile\" page"
+```
+
+### Docker Exec with Nested Commands
+
+**Problem:** Docker exec runs commands inside a container, requiring multiple levels of quoting.
+
+```bash
+# WRONG - Quotes not properly nested
+docker exec container bash -c "echo 'Hello World'"
+
+# CORRECT - Single quotes around the command
+docker exec container bash -c 'echo "Hello World"'
+
+# CORRECT - Complex example with variables
+docker exec container bash -c 'grep "error" /var/log/app.log | tail -n 10'
+
+# CORRECT - With file paths containing spaces
+docker exec container bash -c 'cat "/app/My Files/config.txt"'
+```
+
+**From PowerShell:**
+```powershell
+# CORRECT - Use single quotes in PowerShell
+docker exec container bash -c 'echo "Hello World"'
+
+# CORRECT - Complex nested
+docker exec container bash -c 'mysql -e "SELECT * FROM users WHERE name=''John''"'
+```
+
+### SSH Commands with Nested Quotes
+
+**Problem:** SSH executes commands on remote hosts, requiring quote preservation.
+
+```bash
+# WRONG - Quotes interpreted locally
+ssh user@host "grep 'pattern' /var/log/syslog"
+
+# CORRECT - Escape quotes for remote execution
+ssh user@host 'grep "pattern" /var/log/syslog'
+
+# CORRECT - Complex nested example
+ssh user@host 'docker exec container bash -c "echo \"Hello\""'
+
+# CORRECT - With variables (use backslash escaping)
+local_var="pattern"
+ssh user@host "grep '$local_var' /var/log/syslog"
+```
+
+### JSON Strings as Command Arguments
+
+**Problem:** JSON contains quotes and braces that conflict with shell syntax.
+
+**Bash:**
+```bash
+# WRONG - Unescaped quotes and braces
+curl -X POST -d {"name": "value"} http://api.example.com
+
+# CORRECT - Single quotes protect JSON
+curl -X POST -d '{"name": "value", "nested": {"key": "val"}}' http://api.example.com
+
+# CORRECT - With variables, use heredoc
+json=$(cat <<EOF
+{
+  "name": "value",
+  "path": "/home/user/My Files"
+}
+EOF
+)
+curl -X POST -d "$json" http://api.example.com
+```
+
+**PowerShell:**
+```powershell
+# CORRECT - Use here-string for JSON
+$json = @'
+{
+  "name": "value",
+  "nested": {
+    "key": "val"
+  }
+}
+'@
+Invoke-RestMethod -Method Post -Body $json -Uri 'http://api.example.com'
+
+# CORRECT - Or use ConvertTo-Json
+$data = @{
+    name = "value"
+    path = "C:\Program Files\App"
+}
+$json = $data | ConvertTo-Json
+Invoke-RestMethod -Method Post -Body $json -Uri 'http://api.example.com'
+```
+
+### Multiple Levels of Nesting
+
+**Problem:** Commands within commands within commands...
+
+```bash
+# Example: SSH to host, run docker, execute bash inside container
+# Level 1: Local Bash
+# Level 2: SSH command
+# Level 3: Docker exec
+# Level 4: Bash inside container
+
+# WRONG - Quotes completely broken
+ssh user@host "docker exec container bash -c "echo 'Hello'""
+
+# CORRECT - Progressive escaping
+ssh user@host 'docker exec container bash -c "echo \"Hello\""'
+
+# CORRECT - For very complex cases, use intermediate scripts
+# Create script on remote host first, then execute it
+cat > /tmp/script.sh << 'EOF'
+docker exec container bash -c 'echo "Hello from container"'
+EOF
+
+ssh user@host 'bash /tmp/script.sh'
+```
+
+### Heredoc and Here-String Patterns (BEST PRACTICE)
+
+**Use heredocs to avoid quoting hell entirely:**
+
+**Bash Heredoc:**
+```bash
+# CORRECT - No escaping needed inside heredoc
+cat > script.sh << 'EOF'
+#!/bin/bash
+echo "User's name: O'Brien"
+grep "pattern" 'file with spaces.txt'
+docker exec container bash -c 'echo "nested command"'
+EOF
+
+chmod +x script.sh
+./script.sh
+```
+
+**PowerShell Here-String:**
+```powershell
+# CORRECT - No escaping needed inside here-string
+$script = @'
+Write-Host "User's name: O'Brien"
+Get-Content "file with spaces.txt" | Select-String "pattern"
+docker exec container bash -c 'echo "nested command"'
+'@
+
+$script | Out-File script.ps1
+& .\script.ps1
+```
+
+### Quick Decision Tree for Nested Quoting
+
+```
+Is the command nested?
+├─ No → Use normal quoting rules
+└─ Yes → How many levels?
+    ├─ 1 level (e.g., bash -c "...")
+    │   └─ Use opposite quotes: outer double, inner single (or vice versa)
+    ├─ 2 levels (e.g., ssh ... docker exec ...)
+    │   └─ Use: outer single, middle double, inner escaped double
+    └─ 3+ levels or contains JSON/complex strings
+        └─ Use heredoc/here-string and avoid inline quoting entirely
+```
+
+### Common Nested Quoting Patterns Reference
+
+| Scenario | Shell | Pattern | Example |
+|----------|-------|---------|---------|
+| Call PowerShell from Bash | Bash | Single quotes around entire command | `powershell.exe -Command 'Get-Content "file.txt"'` |
+| Call Bash from PowerShell | PowerShell | Single quotes in PS, double in bash | `bash -c 'echo "Hello"'` |
+| Git commit with quotes | Bash | Heredoc | `git commit -m "$(cat <<'EOF'...)"` |
+| Git commit with quotes | PowerShell | Here-string | `$msg = @"..."@; git commit -m $msg` |
+| Docker exec | Bash | Single outer, double inner | `docker exec c bash -c 'echo "Hi"'` |
+| SSH command | Bash | Single quotes | `ssh host 'command "with quotes"'` |
+| JSON in curl | Bash | Single quotes | `curl -d '{"key":"val"}' url` |
+| JSON in PowerShell | PowerShell | ConvertTo-Json | `$obj | ConvertTo-Json` |
+
+### Anti-Patterns to AVOID
+
+```bash
+# ❌ NEVER: Mix quotes without planning nesting
+powershell.exe -Command "Get-Content "file.txt""
+
+# ❌ NEVER: Forget to escape $ in bash when calling PowerShell
+powershell.exe -Command "Get-Process | Where {$_.Name -eq 'foo'}"
+# Should be: '\$_' or use single quotes
+
+# ❌ NEVER: Use complex inline JSON
+curl -d "{\"key\":\"value with spaces\",\"nested\":{\"key2\":\"val\"}}"
+# Use heredoc or file instead
+
+# ❌ NEVER: Chain multiple levels without testing each level
+ssh host "docker exec c bash -c "mysql -e "SELECT * FROM t"""
+# Build up from innermost to outermost
+```
+
+### Best Practices for Avoiding Quoting Issues
+
+1. **Use heredoc/here-string for anything complex** (3+ lines or 2+ nesting levels)
+2. **Test each nesting level separately** before combining
+3. **Prefer opposite quote types** at each level (outer double, inner single)
+4. **Use intermediate files/scripts** for very complex cases
+5. **Escape $ and ` in bash when passing to other shells**
+6. **Use ConvertTo-Json in PowerShell** instead of manual JSON strings
+7. **Document the nesting levels** with comments when unavoidable
+
 ## Cross-Platform Command Translation
 
 ### Common Operations
