@@ -1,6 +1,6 @@
 - 👋 Hi, I’m @havok-training
 - 👀 I’m interested in everything
-- 🌱 I’m currently learning Java
+- 🌱 I’m currently learning AI, Python, and more
 - 💞️ I’m looking to collaborate on intresting projects
 - 📫 How to reach me GitHub.
 
